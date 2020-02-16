@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_FUGR" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <AREAT>All objects related to Packages</AREAT>
+   <INCLUDES>
+    <SOBJ_NAME>LZBASTOP</SOBJ_NAME>
+    <SOBJ_NAME>SAPLZBAS</SOBJ_NAME>
+   </INCLUDES>
+   <FUNCTIONS>
+    <item>
+     <FUNCNAME>Z_DYNPRO_DOWNLOAD</FUNCNAME>
+     <SHORT_TEXT>Dynpro Screens Download</SHORT_TEXT>
+     <IMPORT>
+      <RSIMP>
+       <PARAMETER>HEADER</PARAMETER>
+       <DBFIELD>D020S</DBFIELD>
+       <REFERENCE>X</REFERENCE>
+      </RSIMP>
+      <RSIMP>
+       <PARAMETER>DESCRIPT</PARAMETER>
+       <DBFIELD>D020T-DTXT</DBFIELD>
+       <OPTIONAL>X</OPTIONAL>
+      </RSIMP>
+      <RSIMP>
+       <PARAMETER>FILE</PARAMETER>
+       <TYP>RLGRAP-FILENAME</TYP>
+      </RSIMP>
+     </IMPORT>
+     <TABLES>
+      <RSTBL>
+       <PARAMETER>FIELDS</PARAMETER>
+       <DBSTRUCT>D021S</DBSTRUCT>
+      </RSTBL>
+      <RSTBL>
+       <PARAMETER>FLOWLOGIC</PARAMETER>
+       <DBSTRUCT>D022S</DBSTRUCT>
+      </RSTBL>
+      <RSTBL>
+       <PARAMETER>PARAMS</PARAMETER>
+       <DBSTRUCT>D023S</DBSTRUCT>
+       <OPTIONAL>X</OPTIONAL>
+      </RSTBL>
+     </TABLES>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>HEADER</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>System table D020S (screen sources)</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>DESCRIPT</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Short Description of Repository Objects</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>FILE</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Local file for upload/download</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>FIELDS</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Screen fields</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>FLOWLOGIC</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Screen Flow Logic</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>PARAMS</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Screen parameters</STEXT>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+   </FUNCTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>

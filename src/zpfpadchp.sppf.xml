@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="ZCL_ABAPGIT_OBJECT_BY_SOBJ" serializer_version="1.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <TSP08>
+    <TSP08>
+     <PFORMAT>ZPFPADCH</PFORMAT>
+     <ORIENT>P</ORIENT>
+     <PGWIDTH>00226</PGWIDTH>
+     <PGWIDTHU>MM</PGWIDTHU>
+     <PGHEIGHT>00280</PGHEIGHT>
+     <PGHEIGHTU>MM</PGHEIGHTU>
+    </TSP08>
+   </TSP08>
+   <TSP08_field_catalog>
+    <item>
+     <POS>1</POS>
+     <NAME>PFORMAT</NAME>
+     <TYPE_KIND>C</TYPE_KIND>
+     <LENGTH>8</LENGTH>
+     <IS_KEY>X</IS_KEY>
+    </item>
+    <item>
+     <POS>2</POS>
+     <NAME>ORIENT</NAME>
+     <TYPE_KIND>C</TYPE_KIND>
+     <LENGTH>1</LENGTH>
+     <IS_KEY>X</IS_KEY>
+    </item>
+    <item>
+     <POS>3</POS>
+     <NAME>PGWIDTH</NAME>
+     <TYPE_KIND>N</TYPE_KIND>
+     <LENGTH>5</LENGTH>
+    </item>
+    <item>
+     <POS>4</POS>
+     <NAME>PGWIDTHU</NAME>
+     <TYPE_KIND>C</TYPE_KIND>
+     <LENGTH>2</LENGTH>
+    </item>
+    <item>
+     <POS>5</POS>
+     <NAME>PGHEIGHT</NAME>
+     <TYPE_KIND>N</TYPE_KIND>
+     <LENGTH>5</LENGTH>
+    </item>
+    <item>
+     <POS>6</POS>
+     <NAME>PGHEIGHTU</NAME>
+     <TYPE_KIND>C</TYPE_KIND>
+     <LENGTH>2</LENGTH>
+    </item>
+   </TSP08_field_catalog>
+  </asx:values>
+ </asx:abap>
+</abapGit>

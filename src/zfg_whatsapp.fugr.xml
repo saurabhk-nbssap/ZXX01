@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_FUGR" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <AREAT>RFC&apos;s for sending message via WhatsApp</AREAT>
+   <INCLUDES>
+    <SOBJ_NAME>LZFG_WHATSAPPTOP</SOBJ_NAME>
+    <SOBJ_NAME>SAPLZFG_WHATSAPP</SOBJ_NAME>
+   </INCLUDES>
+   <FUNCTIONS>
+    <item>
+     <FUNCNAME>ZFM_SEND_WHATSAPP_MSG</FUNCNAME>
+     <REMOTE_CALL>R</REMOTE_CALL>
+     <SHORT_TEXT>Send text message via WhatsApp</SHORT_TEXT>
+     <IMPORT>
+      <RSIMP>
+       <PARAMETER>IV_MESSAGE_TEXT</PARAMETER>
+       <TYP>STRING</TYP>
+      </RSIMP>
+      <RSIMP>
+       <PARAMETER>IV_MOBILE_NUMBER</PARAMETER>
+       <TYP>TELF1</TYP>
+      </RSIMP>
+      <RSIMP>
+       <PARAMETER>IV_COUNTRY_CODE</PARAMETER>
+       <DEFAULT>91</DEFAULT>
+       <OPTIONAL>X</OPTIONAL>
+       <TYP>SKTELFTO</TYP>
+      </RSIMP>
+     </IMPORT>
+     <EXPORT>
+      <RSEXP>
+       <PARAMETER>EV_OK</PARAMETER>
+       <TYP>BOOLEAN</TYP>
+      </RSEXP>
+     </EXPORT>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>IV_MESSAGE_TEXT</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Message to be sent</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>IV_MOBILE_NUMBER</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>First telephone number</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>IV_COUNTRY_CODE</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Country telephone/fax dialling code</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>EV_OK</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Boolean Variable (X=true, space=false)</STEXT>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+   </FUNCTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>

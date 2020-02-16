@@ -1,0 +1,119 @@
+FUNCTION-POOL ZFG_SUSL MESSAGE-ID 01 LINE-SIZE 130.
+type-pools slis.
+DATA  SAVE_SY_PFKEY(4).
+DATA  RC.
+INCLUDE MS01CTCO.
+INCLUDE NAMENSRA.
+
+* USOTT auskommentiert, HW 594300
+* TABLES: USOBT, USOTT, TOBJT.
+TABLES: USOBT, TOBJT.
+TABLES: TSTCT, SMENCA, DF14T, DFIES, AGR_TEXTS.
+TABLES: USR02, USR03, UST04, USR10,
+        UST10C, UST10S, USR11, USR12, UST12, USR13.              "USR0340A
+
+
+CONSTANTS:
+        gc_attr_prof       TYPE seu_text   VALUE 'P',   " Profile
+        gc_attr_refuser    TYPE seu_text   VALUE 'RU',  " Referenzbenutzer
+        gc_pro_own         TYPE seu_text   VALUE 'OP',  " Eigene Profile
+        gc_pro_ref         TYPE seu_text   VALUE 'POR'. " Profile des Refuser
+
+*Flag, das angibt über welche Tabelle Transaktionen ausgewertet werden
+*ata:   flag_s_tcode_or_tstca(7) value 'S_TCODE' .
+DATA:   FLAG_S_TCODE_OR_TSTCA(7) VALUE 'TSTCA'.
+
+DATA:   H_TCOD_TCODE LIKE USOBT-NAME,
+        FERTIG       TYPE I VALUE 0,
+        FCODE(4),
+        SELTYP(2),
+        TITLE1(30),
+        TITLE2(12),
+        HIDEFIELD TYPE SEU_HIDE.
+
+DATA:   COL_USR    TYPE SEU_COLOR VALUE 0,
+        COL_PRO    TYPE SEU_COLOR VALUE 0,
+        COL_OBJ    TYPE SEU_COLOR VALUE 0,
+        COL_AUT    TYPE SEU_COLOR VALUE 0,
+        COL_FLD    TYPE SEU_COLOR VALUE 0,
+        COL_VAL    TYPE SEU_COLOR VALUE 0,
+        col_att    TYPE seu_color VALUE 0,
+        intsv_usr  TYPE seu_intens VALUE 0,
+        INTSV_PRO  TYPE SEU_INTENS VALUE 0,
+        INTSV_OBJ  TYPE SEU_INTENS VALUE 0,
+        INTSV_AUT  TYPE SEU_INTENS VALUE 0,
+        INTSV_FLD  TYPE SEU_INTENS VALUE 0,
+        INTSV_VAL  TYPE SEU_INTENS VALUE 0.
+
+RANGES: OBJECTS FOR TOBJ-OBJCT.
+RANGES: PROFS   FOR UST10S-PROFN.
+RANGES: users   FOR usr02-bname.
+
+DATA  : gd_user     TYPE xubname .                     "note 795769
+DATA  : gd_xflag(1) TYPE C .                           "note 795769
+
+*  4.0B/C  Umstellung USOBT_C statt USOBT  MS 15.12.97
+DATA  BEGIN OF INTUSOBT OCCURS 100.
+        INCLUDE STRUCTURE USOBT_C.
+DATA  END   OF INTUSOBT.
+
+* USOTT auskommentiert, HW 594300
+*DATA  BEGIN OF INTUSOTT OCCURS 100.
+*        INCLUDE STRUCTURE USOTT.
+*DATA  END   OF INTUSOTT.
+
+DATA:   BEGIN OF AUTHLIST OCCURS 30,
+          OBJECT    LIKE USR12-OBJCT,
+          AUTH      LIKE USR12-AUTH,
+          CPF       LIKE USR10-PROFN,
+          PROFILE   LIKE USR10-PROFN,
+          CAUTH     LIKE USR12-AUTH,
+        END OF AUTHLIST.
+
+DATA:   BEGIN OF PROFLIST OCCURS 30,    "Int. Tab. fuer User
+          PROFILE LIKE USR10-PROFN,
+          SAMPROF(1),
+          PTEXT   LIKE USR11-PTEXT,
+        END OF PROFLIST.
+
+DATA:   BEGIN OF AUTS OCCURS 100.
+          INCLUDE STRUCTURE USREF.
+DATA:   END OF AUTS.
+
+DATA:   BEGIN OF TCODES OCCURS 100.
+          INCLUDE STRUCTURE USSEL.
+DATA:   END OF TCODES.
+
+DATA:   BEGIN OF TCODES1 OCCURS 100.
+        INCLUDE STRUCTURE USSEL1.  " zusätzl. selekt.option f. rsusr010
+DATA:   END OF TCODES1.
+
+DATA:   BEGIN OF OBJS OCCURS 100.
+          INCLUDE STRUCTURE USSEL.
+DATA:   END OF OBJS.
+
+DATA:   BEGIN OF TC OCCURS 100,
+          TCODE   LIKE TSTCT-TCODE,
+          TTEXT   LIKE TSTCT-TTEXT,
+          COMP    LIKE SMENCA-FCTR_ID,
+          CTEXT(60),
+        END OF TC.
+
+  DATA:  BEGIN OF TEMPTSTCT OCCURS 100.
+          INCLUDE STRUCTURE TSTCT.
+  DATA:  END OF TEMPTSTCT.
+
+  DATA:  BEGIN OF TEMPTSTCT1 OCCURS 100.
+          INCLUDE STRUCTURE TSTCT.
+  DATA    SELTYPE LIKE USSEL1-SELTYPE.
+  DATA:  END OF TEMPTSTCT1.
+
+DATA: BEGIN OF NODETAB OCCURS 100.
+        INCLUDE STRUCTURE SNODETEXT.
+DATA: END OF NODETAB.
+RANGES RANGE_OBJCT_NAME FOR UST12-OBJCT. "note 708324
+DATA: RC_TREE TYPE I.                    "note 733001
+
+DATA: gd_tree_status(4) TYPE C .                          "note 795769
+
+DATA  : gd_refuser  LIKE usrefus-refuser.

@@ -1,0 +1,1369 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_PROG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <PROGDIR>
+    <NAME>ZRSTXR3TR</NAME>
+    <SQLX>X</SQLX>
+    <DBAPL>S</DBAPL>
+    <DBNA>$$</DBNA>
+    <CLAS>STXD</CLAS>
+    <SUBC>1</SUBC>
+    <APPL>S</APPL>
+    <RSTAT>P</RSTAT>
+    <RLOAD>D</RLOAD>
+    <FIXPT>X</FIXPT>
+    <UCCHECK>X</UCCHECK>
+   </PROGDIR>
+   <TPOOL>
+    <item>
+     <ID>I</ID>
+     <KEY>017</KEY>
+     <ENTRY>Unable to open file for writing:</ENTRY>
+     <LENGTH>50</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>018</KEY>
+     <ENTRY>Unable to open file for reading:</ENTRY>
+     <LENGTH>46</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>019</KEY>
+     <ENTRY>****************************** Start SAPscript Transporter RSTXR3TR *******</ENTRY>
+     <LENGTH>75</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>020</KEY>
+     <ENTRY>****************************** End SAPscript Transporter RSTXR3TR *********</ENTRY>
+     <LENGTH>75</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>021</KEY>
+     <ENTRY>Request selection and session ctrl</ENTRY>
+     <LENGTH>36</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>022</KEY>
+     <ENTRY>Ctrl parameters for file operation</ENTRY>
+     <LENGTH>35</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>023</KEY>
+     <ENTRY>Control of language versions</ENTRY>
+     <LENGTH>30</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>030</KEY>
+     <ENTRY>Warning against overwriting device type &amp;1</ENTRY>
+     <LENGTH>42</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>031</KEY>
+     <ENTRY>Version in system (&amp;1) newer than in file (&amp;2)</ENTRY>
+     <LENGTH>46</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>032</KEY>
+     <ENTRY>Continue anyway?</ENTRY>
+     <LENGTH>20</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>033</KEY>
+     <ENTRY>Timestamp in system (&amp;1) newe than in file (&amp;2)</ENTRY>
+     <LENGTH>50</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>051</KEY>
+     <ENTRY>ERROR -  only use EXPORT or IMPORT as mode parameters</ENTRY>
+     <LENGTH>60</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>052</KEY>
+     <ENTRY>Message &amp; number &amp; language &amp; is not maintained!</ENTRY>
+     <LENGTH>53</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>057</KEY>
+     <ENTRY>Spooler informed of change</ENTRY>
+     <LENGTH>46</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>060</KEY>
+     <ENTRY>Binary dataset contains data in code page</ENTRY>
+     <LENGTH>41</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>061</KEY>
+     <ENTRY>Dataset does not contain a correct binary format</ENTRY>
+     <LENGTH>48</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>062</KEY>
+     <ENTRY>Dataset contains an unknown code page</ENTRY>
+     <LENGTH>40</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>080</KEY>
+     <ENTRY>No authorization for IMPORT</ENTRY>
+     <LENGTH>50</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>200</KEY>
+     <ENTRY>Error in TABLE COMPRESS</ENTRY>
+     <LENGTH>25</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>201</KEY>
+     <ENTRY>Error in TABLE DECOMPRESS</ENTRY>
+     <LENGTH>27</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>202</KEY>
+     <ENTRY>Error: Invalid block ID, incorrect file format</ENTRY>
+     <LENGTH>52</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>203</KEY>
+     <ENTRY>Error: Too few compressed blocks, file incomplete</ENTRY>
+     <LENGTH>58</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>204</KEY>
+     <ENTRY>Error: Decompressed table is empty</ENTRY>
+     <LENGTH>40</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>205</KEY>
+     <ENTRY>Target character set for import changed:</ENTRY>
+     <LENGTH>40</LENGTH>
+    </item>
+    <item>
+     <ID>R</ID>
+     <ENTRY>Transport Program For SAPscript Transport Objects</ENTRY>
+     <LENGTH>70</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>BINFILE</KEY>
+     <ENTRY>Binary file format</ENTRY>
+     <LENGTH>27</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>DATASET</KEY>
+     <ENTRY>File Name</ENTRY>
+     <LENGTH>19</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>LISTFILE</KEY>
+     <ENTRY>Display File Contents</ENTRY>
+     <LENGTH>36</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>LOCALFIL</KEY>
+     <ENTRY>File System: GUI</ENTRY>
+     <LENGTH>28</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>MASTLANG</KEY>
+     <ENTRY>Only export original language</ENTRY>
+     <LENGTH>37</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>MODE</KEY>
+     <ENTRY>Mode (EXPORT/IMPORT)</ENTRY>
+     <LENGTH>29</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>PLANGVEC</KEY>
+     <ENTRY>Language vector</ENTRY>
+     <LENGTH>23</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>SERVFIL</KEY>
+     <ENTRY>File System: Server</ENTRY>
+     <LENGTH>27</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>TRKORR</KEY>
+     <ENTRY>Transport request</ENTRY>
+     <LENGTH>25</LENGTH>
+    </item>
+   </TPOOL>
+   <I18N_TPOOL>
+    <item>
+     <LANGUAGE>D</LANGUAGE>
+     <TEXTPOOL>
+      <item>
+       <ID>I</ID>
+       <KEY>017</KEY>
+       <ENTRY>Dataset konnte nicht zum Schreiben geöffnet werden</ENTRY>
+       <LENGTH>50</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>018</KEY>
+       <ENTRY>Dataset konnte nicht zum Lesen geöffnet werden</ENTRY>
+       <LENGTH>46</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>019</KEY>
+       <ENTRY>*************** Start SAPscript Transport RSTXR3TR ************</ENTRY>
+       <LENGTH>63</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>020</KEY>
+       <ENTRY>*************** Ende SAPscript Transport RSTXR3TR *************</ENTRY>
+       <LENGTH>63</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>021</KEY>
+       <ENTRY>Auftragsselektion und Modussteuerung</ENTRY>
+       <LENGTH>36</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>022</KEY>
+       <ENTRY>Steuerparameter für Datei-Operation</ENTRY>
+       <LENGTH>35</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>023</KEY>
+       <ENTRY>Kontrolle über Sprachversionen</ENTRY>
+       <LENGTH>30</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>030</KEY>
+       <ENTRY>Warnung vor Überschreiben von Gerätetyp &amp;1</ENTRY>
+       <LENGTH>42</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>031</KEY>
+       <ENTRY>Version im System (&amp;1) neuer als in Datei (&amp;2)</ENTRY>
+       <LENGTH>46</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>032</KEY>
+       <ENTRY>Trotzdem fortfahren?</ENTRY>
+       <LENGTH>20</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>033</KEY>
+       <ENTRY>Zeitstempel im System (&amp;1) neuer als in Datei (&amp;2)</ENTRY>
+       <LENGTH>50</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>051</KEY>
+       <ENTRY>ERROR - Als Modus-Parameter nur EXPORT oder IMPORT verwenden</ENTRY>
+       <LENGTH>60</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>052</KEY>
+       <ENTRY>Die Nachricht &amp; Nummer &amp; Sprache &amp; ist nicht gepflegt</ENTRY>
+       <LENGTH>53</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>057</KEY>
+       <ENTRY>Der Spooler wurde über die Änderung informiert</ENTRY>
+       <LENGTH>46</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>060</KEY>
+       <ENTRY>Binäres Dataset enthält Daten in Codepage</ENTRY>
+       <LENGTH>41</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>061</KEY>
+       <ENTRY>Dataset enthält kein korrektes Binärformat</ENTRY>
+       <LENGTH>42</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>062</KEY>
+       <ENTRY>Dataset enthält eine unbekannte Codepage</ENTRY>
+       <LENGTH>40</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>080</KEY>
+       <ENTRY>keine Berechtigung für IMPORT</ENTRY>
+       <LENGTH>50</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>200</KEY>
+       <ENTRY>Fehler bei TABLE COMPRESS</ENTRY>
+       <LENGTH>25</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>201</KEY>
+       <ENTRY>Fehler bei TABLE DECOMPRESS</ENTRY>
+       <LENGTH>27</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>202</KEY>
+       <ENTRY>Fehler: Ungültige Blockkennung, falsches Dateiformat</ENTRY>
+       <LENGTH>52</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>203</KEY>
+       <ENTRY>Fehler: Zu wenige komprimierte Blöcke, Datei unvollständig</ENTRY>
+       <LENGTH>58</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>204</KEY>
+       <ENTRY>Fehler: Entkomprimierte Tabelle ist leer</ENTRY>
+       <LENGTH>40</LENGTH>
+      </item>
+      <item>
+       <ID>I</ID>
+       <KEY>205</KEY>
+       <ENTRY>Zielzeichensatz für Import geändert:</ENTRY>
+       <LENGTH>36</LENGTH>
+      </item>
+      <item>
+       <ID>R</ID>
+       <ENTRY>Transportprogramm für SAPscript-Transportobjekte</ENTRY>
+       <LENGTH>48</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>BINFILE</KEY>
+       <ENTRY>Binäres Dateiformat</ENTRY>
+       <LENGTH>27</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>DATASET</KEY>
+       <ENTRY>Dateiname</ENTRY>
+       <LENGTH>19</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>LISTFILE</KEY>
+       <ENTRY>Dateiinhalt anzeigen</ENTRY>
+       <LENGTH>36</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>LOCALFIL</KEY>
+       <ENTRY>Dateisystem: GUI</ENTRY>
+       <LENGTH>28</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>MASTLANG</KEY>
+       <ENTRY>Nur Originalsprache export.</ENTRY>
+       <LENGTH>35</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>MODE</KEY>
+       <ENTRY>Modus (EXPORT,IMPORT)</ENTRY>
+       <LENGTH>29</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>PLANGVEC</KEY>
+       <ENTRY>Sprachenvektor</ENTRY>
+       <LENGTH>22</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>SERVFIL</KEY>
+       <ENTRY>Dateisystem: Server</ENTRY>
+       <LENGTH>27</LENGTH>
+      </item>
+      <item>
+       <ID>S</ID>
+       <KEY>TRKORR</KEY>
+       <ENTRY>Transportauftrag</ENTRY>
+       <LENGTH>24</LENGTH>
+      </item>
+     </TEXTPOOL>
+    </item>
+   </I18N_TPOOL>
+   <LONGTEXTS>
+    <item>
+     <DOKIL>
+      <ID>RE</ID>
+      <OBJECT>ZRSTXR3TR</OBJECT>
+      <LANGU>D</LANGU>
+      <TYP>E</TYP>
+      <VERSION>0018</VERSION>
+      <MASTERLANG>X</MASTERLANG>
+      <TXTLINES>00128</TXTLINES>
+      <DOKSTATE>A</DOKSTATE>
+     </DOKIL>
+     <HEAD>
+      <TDOBJECT>DOKU</TDOBJECT>
+      <TDNAME>ZRSTXR3TR</TDNAME>
+      <TDID>RE</TDID>
+      <TDSPRAS>D</TDSPRAS>
+      <TDFORM>S_DOCU_SHOW</TDFORM>
+      <TDSTYLE>S_DOCUS1</TDSTYLE>
+      <TDVERSION>00018</TDVERSION>
+      <TDLINESIZE>072</TDLINESIZE>
+     </HEAD>
+     <LINES>
+      <TLINE>
+       <TDFORMAT>U1</TDFORMAT>
+       <TDLINE>&amp;DESCRIPTION&amp;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Der Report RSTXR3TR erlaubt das Übertragen von SAPscript-Objekten</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>(Texte, Stile, Formulare) sowie Gerätetypen zwischen R/3 und einer</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>lokalen oder zentralen Datei. Welche Objekte zu übertragen sind, wird</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>aus einem im Transportwesen angelegten Transportauftrag übernommen.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Die Einträge im Transportauftrag sehen folgendermaßen aus:</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B2</TDFORMAT>
+       <TDLINE>Formulare werden mittels &lt;ZH&gt;R3TR  FORM  NAME&lt;/&gt; transportiert, wobei</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>NAME für den Namen des Formulars steht.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B2</TDFORMAT>
+       <TDLINE>Stile werden mittels &lt;ZH&gt;R3TR  STYL  NAME&lt;/&gt; transportiert, wobei NAME</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>für den Namen des Stils steht.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B2</TDFORMAT>
+       <TDLINE>Texte werden mittels &lt;ZH&gt;R3TR  TEXT  OBJECT,NAME,ID,L&lt;/&gt; transportiert,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>wobei OBJECT für das Textobjekt (aus Tabelle TTXOB), NAME für den</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Textnamen, ID für die Text-Id (aus Tabelle TTXID) und L für den</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Sprachschlüssel des Texts steht.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B2</TDFORMAT>
+       <TDLINE>Gerätetypen werden mittels &lt;ZH&gt;R3TR  PRIN  NAME&lt;/&gt; transportiert, wobei</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>NAME für den Namen des Gerätetyps steht.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>&lt;ZU&gt;Hinweis:&lt;/&gt; Texte, Stile und Formulare sind mandantenabhängig! Sie</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>werden beim Export immer aus dem &lt;ZK&gt;aktuellen&lt;/&gt; Mandanten gelesen und</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>beim Import immer in den &lt;ZK&gt;aktuellen&lt;/&gt; Mandanten eingespielt.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Druckerdefinitionen sind nicht mandantenabhängig, der aktuelle Mandant</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>spielt beim Export/Import von Gerätetypen daher keine Rolle.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>&lt;ZU&gt;Wichtiger Hinweis:&lt;/&gt; Bei sprachabhängigen Objekten (d.h. Texte,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Stile und Formulare) werden im Zielsystem nur diejenigen Sprachen (bzw.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Übersetzungen, Fremdsprachen) importiert, die im sog. Sprachenvektor</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>des Systems enthalten sind. Dies ist der Profilparameter</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>&quot;zcsa/installed_languages&quot; des Applikationsservers. Der Reportparameter</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>&quot;Sprachenvektor&quot; erlaubt das Ersetzen des Standard-Sprachenvektors</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>durch einen eigenen Sprachenvektor beim Aufruf.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Das Transportprotokoll von RSTXR3TR gibt den beim Export bzw. Import</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>verwendeten Sprachenvektor aus. Können Objekte nicht exportiert bzw.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>importiert werden, weil ihre Sprache nicht im Sprachenvektor des Quell-</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>bzw. Zielsystems enthalten ist, so erfolgt eine entsprechende Meldung</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>im Transportprotokoll.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Die zu lesende bzw. zu schreibende Datei kann sich entweder lokal im</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Dateisystem des Frontend-Servers (GUI) befinden, oder im zentralen</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Dateisystem des Applikationsservers (Defaulteinstellung).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>U1</TDFORMAT>
+       <TDLINE>&amp;PRECONDITION&amp;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Stile und Formulare bestehen aus Pflege- und Aktivversion sowie</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>fremdsprachigen Versionen (Übersetzungen). Beim Export eines</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Stils/Formulars wird immer nur die &lt;ZH&gt;aktive Version&lt;/&gt; des</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Stils/Formulars exportiert, d.h. Pflegeversionen werden nicht</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>transportiert. Alle vorhandenen Übersetzungen eines Stils/Formulars</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>werden ebenfalls transportiert, falls deren Sprache im Sprachvektor</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>enthalten ist.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Ist ein Stil/Formular als &quot;nicht übersetzungsrelevant&quot; gekennzeichnet,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>so wird nur dessen Originalsprache exportiert. Der Import eines solchen</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>nicht zu übersetzenden Stils/Formulars löscht automatisch die im</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Zielsystem evtl. vorhandenen Übersetzungen.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Bei Textobjekten kann RSTXR3TR alle Texte in oder aus dem aktuellen</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Mandanten übertragen, die in der SAPscript-Textdatei abgelegt werden</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>(also z.B. keine Dokutexte).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Der Transport eines nicht existierenden Gerätetyps löscht die</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Definition dieses Gerätetyps im Zielsystem.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Anzugebende Parameter:</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Transportauftrag:&lt;/&gt; Name eines mit dem R/3-Transportwesen</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>angelegten Transportauftrags (z.B. B20K009999). In diesem</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Transportauftrag sind die Namen bzw. Schlüssel der zu exportierenden</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Objekte hinterlegt. Dieser Report kann nur die Objekttypen TEXT, FORM,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>STYL und PRIN transportieren, keine sonstigen Transportobjekte. Der</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Transportauftrag muß im Zielsystem nicht existieren.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Modus:&lt;/&gt; EXPORT (Runterladen aus R/3 in Dataset) oder IMPORT</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>(Hochladen aus Dataset ins R/3).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Dateisystem:&lt;/&gt; Hier wird ausgewählt, ob die Datei lokal</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>(GUI-Dateisystem) oder auf dem Applikationsserver (Defaulteinstellung)</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>gelesen/geschrieben wird.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Dateiname:&lt;/&gt; Pfad und Dateiname der zu erzeugenden bzw. zu</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>lesenden Datei im Dateisystem des Applikationsservers. Der hier</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>gewählte Name muß den Restriktionen der R/3-Plattform (UNIX, Windows</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>NT, AS/400) genügen. Als Vorschlagswert erscheint &quot;/tmp/RSTXR3TR.****&quot;.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Dies ist lediglich eine Schablone und nicht der tatsächliche Dateiname!</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Wird der Vorschlagswert nicht überschrieben, so wird &quot;****&quot; durch den</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>aktuellen Benutzernamen (SY-UNAME) ersetzt.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Bei lokalen Dateien ist dieser Parameter ohne Bedeutung, es erscheint</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>eine getrennte Eingabemaske für den lokalen Dateinamen.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Binäres Dateiformat:&lt;/&gt; Falls dieser Parameter angekreuzt ist, wird</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>ein binäres Dateiformat mit fester Satzlänge geschrieben bzw. beim</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Lesen vorausgesetzt. Dieses Dateiformat ist nicht kompatibel zum</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>&quot;Nicht-Binärformat&quot;, d.h. Dateien, bei denen der Parameter beim</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Schreiben gesetzt war, können nur mit gesetzem Parameter gelesen</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>werden. Die von RSTXR3TR erzeugten Binärdateien sind durch den String</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>&quot;RSTX@&quot; (ASCII-Codierung) am Dateianfang gekennzeichnet.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Im Binärformat erhält die Datei ein Kennzeichen, in welchem</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Systemzeichensatz die Daten geschrieben wurden. RSTXR3TR führt dann</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>beim Import der Datei eine Zeichensatzkonvertierung vom Zeichensatz der</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Datei in den Systemzeichensatz des aktuellen Systems durch. Auf diese</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Weise ist ein Austausch der von RSTXR3TR erzeugten Dateien zwischen</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Systemen mit verschiedenen Systemzeichensätzen möglich.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Wichtige Einschränkung: Die Zeichensatzkonvertierung ist nur sinnvoll</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>zu verwenden, wenn Dateien zwischen zwei Systemen mit identischer</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Zeichenmenge ausgetauscht werden. Enthalten Objekte im Quellsystem</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Zeichen, die nicht im Systemzeichensatz des Zielsystems enthalten sind,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>so werden diese bei der Konvertierung durch ein Ersatzzeichen</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>dargestellt und verändern dadurch ihren Inhalt. Die Objekte werden</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>unter einem modifizierten Schlüssel importiert, wenn nicht-übersetzbare</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Zeichen Bestandteil des Objektschlüssels sind (z.B. ein Textname mit</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>osteuropäischen Sonderzeichen).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Dateiinhalt anzeigen:&lt;/&gt; Falls dieser Parameter angekreuzt ist,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>wird der Inhalt der erzeugten bzw. gelesenen Datei zusammen mit dem</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Transportprotokoll aufgelistet. Anderenfalls wird nur das</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Transportprotokoll ausgegeben.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Sprachenvektor:&lt;/&gt; Falls dieser Parameter mit einem Wert (d.h.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>einem oder mehreren Sprachkennzeichen) versehen ist, so wird dieser</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Reportparameter als Sprachenvektor beim Export bzw. Import der</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>sprachanhängigen Objekte verwendet. Defaultmäßig wird als</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Sprachenvektor der Profilparameter &quot;zcsa/installed_languages&quot; genutzt.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Nur Originalsprache export.:&lt;/&gt; Ist dieser Parameter angekreuzt, so</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>werden beim Export von Formularen oder Stilen nur deren Originalsprache</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>transportiert, jedoch keine Übersetzungen.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>U1</TDFORMAT>
+       <TDLINE>&amp;OUTPUT&amp;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Der Report erzeugt ein Ablaufprotokoll des Imports bzw. Exports.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>U1</TDFORMAT>
+       <TDLINE>&amp;EXAMPLE&amp;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Zum Runterladen der Transportobjekte aus Transportauftrag B20K009999</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>ins Dataset &quot;/usr/sap/trans/clipboard/RSTXR3TR.USER&quot; (wobei USER für</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>den tatsächlichen Benutzernamen steht) folgendes eingeben:</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Transportauftrag: B20K009999</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Modus: EXPORT</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Datasetname: /usr/sap/trans/clipboard/RSTXR3TR.****</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>(Restliche Reportparameter auf Defaultwert)</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Zum Hochladen der Objekte aus diesem Dataset in ein anderes System muß</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>man zunächst das Dataset auf Betriebssystemebene (z.B. mit dem Programm</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>ftp) in ein vom R/3 System lesbares Verzeichnis bringen (z.B.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>/usr/sap/trans/clipboard). Man achte darauf, daß die Leseberechtigungen</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>für die Datei gesetzt sind (&quot;read-bits&quot; auf UNIX-Plattformen). Nun muß</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>man RSTXR3TR in diesem anderen System in dem Mandanten starten, in dem</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>die Objekte abgelegt werden sollen. Die Parameter werden dann</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>folgendermaßen belegt:</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Transportauftrag: B20K009999</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Modus: IMPORT</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Datasetname: /usr/sap/trans/clipboard/RSTXR3TR.****</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>(Restliche Reportparameter auf Defaultwert)</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Man beachte das dabei erzeugte Importprotokoll, wo evtl. Probleme</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>aufgelistet werden.</TDLINE>
+      </TLINE>
+     </LINES>
+    </item>
+    <item>
+     <DOKIL>
+      <ID>RE</ID>
+      <OBJECT>ZRSTXR3TR</OBJECT>
+      <LANGU>E</LANGU>
+      <TYP>E</TYP>
+      <VERSION>0018</VERSION>
+      <TXTLINES>00124</TXTLINES>
+      <DOKSTATE>A</DOKSTATE>
+     </DOKIL>
+     <HEAD>
+      <TDOBJECT>DOKU</TDOBJECT>
+      <TDNAME>ZRSTXR3TR</TDNAME>
+      <TDID>RE</TDID>
+      <TDSPRAS>E</TDSPRAS>
+      <TDFORM>S_DOCU_SHOW</TDFORM>
+      <TDSTYLE>S_DOCUS1</TDSTYLE>
+      <TDVERSION>00018</TDVERSION>
+      <TDLINESIZE>072</TDLINESIZE>
+     </HEAD>
+     <LINES>
+      <TLINE>
+       <TDFORMAT>U1</TDFORMAT>
+       <TDLINE>&amp;DESCRIPTION&amp;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Report RSTXR3TR allows SAPscript objects (texts, styles, forms) and</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>device types to be transported between R/3 and a local or central file.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Which objects are to be transferred is taken from a transport request</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>created in the transport system.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>The entries in the transport request appear as follows:</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B2</TDFORMAT>
+       <TDLINE>Forms are transported using &lt;ZH&gt;R3TR  FORM  NAME&lt;/&gt;, where NAME stands</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>for the name of the form.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B2</TDFORMAT>
+       <TDLINE>Styles are transported using &lt;ZH&gt;R3TR  STYL  NAME&lt;/&gt;, where NAME stands</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>for the name of the style.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B2</TDFORMAT>
+       <TDLINE>Texts are transported using &lt;ZH&gt;R3TR  TEXT  OBJECT,NAME,ID,L&lt;/&gt;, where</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>OBJECT stands for the text object (from table TTXOB), NAME for the text</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>name, ID for the text ID (from table TTXID), and L for the language key</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>of the text.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B2</TDFORMAT>
+       <TDLINE>Device types are transported using &lt;ZH&gt;R3TR  PRIN  NAME&lt;/&gt;, where NAME</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>stands for the name of the device type.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>&lt;ZU&gt;Note:&lt;/&gt; Texts, styles, and forms are client-specific! They are</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>always read from the &lt;ZK&gt;current&lt;/&gt; client when exported and to the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>&lt;ZK&gt;current&lt;/&gt; client when imported. Printer definitions are not</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>client-specific. The current client is therefore not significant when</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>exporting/importing device types.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>&lt;ZU&gt;Important note:&lt;/&gt; In the case of language-specific objects (that</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>is texts, styles, and forms), only those languages (or translations,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>foreign languages) will be imported in the target system which are</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>contained in the &apos;language vector&apos; of the system. This is the profile</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>parameter &quot;zcsa/installed_languages&quot; of the application server. The</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>report parameter &quot;Language vector&quot; allows the standard language vector</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>to be replaced with a specific one when called.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>The transport log of RSTXR3TR outputs the language vector used in the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>export or import. If objects cannot be exported or imported because</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>their language is not in the language vector of the source or target</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>system, a message to this effect is displayed in the transport log.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>The file to be written or read can be located either locally in the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>file system of the frontend server (GUI) or in the central file system</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>of the application server (default setting).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>U1</TDFORMAT>
+       <TDLINE>&amp;PRECONDITION&amp;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Styles and forms consist of maintenance and active versions and foreign</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>language versions (translations). When a style/form is exported, only</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>the &lt;ZH&gt;active version&lt;/&gt; of the style/form is exported. Maintenance</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>versions are not transported. All existing translations of a style/form</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>are also transported if the language is contained in the language</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>vector.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>If a style/form is marked as not relevant for translation, only its</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>original language is exported. The import of such a style/form which is</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>not to be translated automatically deletes any translations which may</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>exist in the target system.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>In the case of text objects, RSTXR3TR can transport all texts to or</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>from the current client which are stored in the SAPscript text file (no</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>documentation texts, for example).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Transporting a non-existent device type deletes the definition of this</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>device type in the target system.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>Parameters which need to be specified:</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Transport request: name of a transport request (for example,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>B20K009999) created with the R/3 Change and Transport system. The names</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>or keys of the objects to be transported are contained in this</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>transport request. This report can only transport the object types</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>TEXT, FORM, STYL, and PRIN. Transport of other transport objects is not</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>possible. The transport request does not have to exist in the target</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>system.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Mode:&lt;/&gt; EXPORT (downloading from R/3 to a dataset) or IMPORT</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>(uploading from a dataset to R/3).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;File system:&lt;/&gt; The choice as to whether the file is read/written</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>locally (GUI file system) or on the application server (default</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>setting) is made here.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;File name:&lt;/&gt; Path and file name of the file to be generated or</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>read in the file system of the application server. The name selected</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>must fulfill any requirements specified by the R/3 platform (UNIX,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Windows NT, AS/400). &quot;/tmp/RSTXR3TR.****&quot; appears as a default value.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>This is only a template and not the actual file name! If the default</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>value is not overwritten, &quot;****&quot; is replaced by the actual user name</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>(SY-UNAME).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>This parameter is not significant for local files. An input template</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>appears for the local file name.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Binary file format:&lt;/&gt; If this parameter is selected, a binary file</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>format with a fixed record length is written or required for reading.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>This file format is not compatible with a &quot;non-binary format&quot;, that is</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>files for which the parameter was set during writing can only be read</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>with a set parameter. The binary files generated by RSTXR3TR are</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>identified by the string &quot;RSTX@&quot; (ASCII code) at the beginning of the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>file.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>In binary format, the file contains an identifier indicating in which</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>system character set the data was written. RSTXR3TR then performs a</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>character set conversion from the file character set to the system</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>character set of the current system when the file is imported. It is</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>therefore possible to exchange files generated by RSTXR3TR between</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>systems with different system character sets.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Important restriction: You are advised to only use the character set</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>conversion when exchanging files between two systems with an identical</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>number of characters. If objects in the source system contain</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>characters which are not contained in the system character set of the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>target system, they are represented by a substitute character when</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>converted and their contents are therefore changed. The objects are</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>imported under a modified key if non-translatable characters are part</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>of the object key (for example, a text name with East European special</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>characters).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Display file contents:&lt;/&gt; If this parameter is selected, the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>contents of the generated or read file are listed together with the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>transport log. Otherwise only the transport log is output.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Language vector:&lt;/&gt; If this parameter has a value (that is, one or</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>more language keys), this report parameter is used as a language vector</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>for exporting or importing the language-specific objects. The profile</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>parameter &quot;zcsa/installed_languages&quot; is used as the default language</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>vector.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>&lt;ZH&gt;Only export original language:&lt;/&gt; If this parameter is selected,</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>only the original language for forms and styles is transported when</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>exporting, and no translations.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>U1</TDFORMAT>
+       <TDLINE>&amp;OUTPUT&amp;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>The report generates an action log of the imports and exports.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>U1</TDFORMAT>
+       <TDLINE>&amp;EXAMPLE&amp;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>In order to download the transport objects from the transport request</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>B20K009999 to the dataset &quot;/usr/sap/trans/clipboard/RSTXR3TR.USER&quot;</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>(where USER stands for the actual user name), enter the following:</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Transport request: B20K009999</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Mode: EXPORT</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Dataset name: /usr/sap/trans/clipboard/RSTXR3TR.****</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>(Other report parameters to default value)</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>AS</TDFORMAT>
+       <TDLINE>To upload the objects from this dataset to another system, the dataset</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>must first be brought to operating system level (for example with the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>program ftp) in a directory which can be read by the R/3 System (for</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>example /usr/sap/trans/clipboard). Make sure that the read</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>authorizations for the file are set (&quot;read-bits&quot; on UNIX platforms).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>Now RSTXR3TR must be started in this system in the client in which the</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDLINE>objects are to be stored. The parameters are then filled as follows:</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Transport request: B20K009999</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Mode: IMPORT</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Dataset name: /usr/sap/trans/clipboard/RSTXR3TR.****</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>(other report parameters to default value).</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+       <TDLINE>Check the import log generated, where any problems are listed.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>/</TDFORMAT>
+      </TLINE>
+     </LINES>
+    </item>
+   </LONGTEXTS>
+  </asx:values>
+ </asx:abap>
+</abapGit>

@@ -1,0 +1,206 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_HELPER</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>Useful Reusable Utilities</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+    <RSTAT>K</RSTAT>
+    <MSG_ID>Z_MESSAGE</MSG_ID>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>ABAP_TO_XML</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert ABAP Data to XML</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>BUILD_BASE64_FROM_URL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get data from a url and convert it to base64 encoding</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>BUILD_INDUCTION_EMAIL_BODY</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Build html body for welcome/induction email</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>CALC_PO_ITEM_TAX</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Calulcate and return PO item tax in KOMV structure</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>CHECK_FILE_EXISTS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Check whether file exists on frontend or app server</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>CHECK_FILE_FORMAT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Check Excel File Format - Should match with internal table</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>CLEAR_X_FIELDS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Clear X(update) fields from given BAPI structure</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>CONDENSE_DATA</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Condense character fields</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>CONV_EXIT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Conversion Exit Input/Output</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>CONV_SPOOL_LIST_2_ALV</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert Spool List to ALV Grid</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>DELETE_FILE_FROM_APP_SERVER</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Delete specified file from app server</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>DISPLAY_EXCEPTION</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Display exceptions thrown by class/method/fm</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>DMS_DOWNLOAD_UTILITY</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Mass download DMS documents</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>EXCEL_TO_ITAB</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Upload Excel(XLS/XLSX) file to SAP internal table</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>FILE_SELECTION_DIALOG</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Select file from frontend</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>FILL_X_FIELDS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Fills &apos;X&apos;(update) fields corresponding to main data struct</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>FORMAT_EXCEL_TO_BAPI</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert excel data to bapi format</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>GC_SANDBOX_SYSID</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>ABAP System Field: Name of SAP System</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>GET_DOBJ_NAME</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get Name of Data Object/Variable</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>GET_MANAGER_EMP_ID</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Requires Employee ID; Returns Manager Employee ID</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>IS_DEVELOPMENT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Returns true if client is development</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>IS_PRODUCTION</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Returns true if client is production</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>IS_QUALITY</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Returns true if client is quality</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>IS_SANDBOX</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Returns true if client is sandbox</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>ITAB_TO_EXCEL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Download SAP internal table to excel(XLSX)</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>PRINT_NO_PG_BRK</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Print ALV data in spool output without page breaks</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>READ_FILE_FROM_APP_SERVER</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Read file from to app server path =&gt; download or xstring tab</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>REMOVE_SPECIAL_CHARS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Remove special chars from a string</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>UPDATE_REPORT_VARIANTS_DB</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Update von DB-Tabelle LTDX, LTDXT, LTDXD ggf LTDXS</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>WRITE_FILE_TO_APP_SERVER</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Write file from frontend or binary data to app server path</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>XML_TO_ABAP</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert XML to ABAP Data</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>

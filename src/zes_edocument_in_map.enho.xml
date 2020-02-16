@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_ENHO" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <TOOL>BADI_IMPL</TOOL>
+   <SHORTTEXT>enh for PI intergrATION</SHORTTEXT>
+   <SPOT_NAME>ES_EDOCUMENT_IN_MAP</SPOT_NAME>
+   <IMPL>
+    <ENH_BADI_IMPL_DATA>
+     <SPOT_NAME>ES_EDOCUMENT_IN_MAP</SPOT_NAME>
+     <BADI_NAME>EDOC_IN_MAP</BADI_NAME>
+     <IMPL_NAME>ZES_EDOCUMENT_IN_MAP</IMPL_NAME>
+     <IMPL_CLASS>ZCL_ES_EDOCUMENT_IN_MAP</IMPL_CLASS>
+     <ACTIVE>X</ACTIVE>
+     <IMPL_SHORTTEXT>Implementation: eDocument India Mapping</IMPL_SHORTTEXT>
+     <IMPL_SHORTTEXT_ID>16CE6E8AA1281EE7A58FB0C0A1970E0B</IMPL_SHORTTEXT_ID>
+    </ENH_BADI_IMPL_DATA>
+   </IMPL>
+  </asx:values>
+ </asx:abap>
+</abapGit>

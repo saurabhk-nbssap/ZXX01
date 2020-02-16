@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_CLAS" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <VSEOCLASS>
+    <CLSNAME>ZCL_EMAIL</CLSNAME>
+    <LANGU>E</LANGU>
+    <DESCRIPT>Custom E-Mail generation and transmission</DESCRIPT>
+    <STATE>1</STATE>
+    <CLSCCINCL>X</CLSCCINCL>
+    <FIXPT>X</FIXPT>
+    <UNICODE>X</UNICODE>
+   </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>ATTACHMENT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Email attachment</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>ATTACHMENTS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>For multiple attachments</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>CREATE_ATTACHMENT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Create attachment</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>DELETE_CONF_EMAIL_ON_SEP</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Delete scheduled confirmation email on separation via ZHR_PS</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>ITAB_TO_STRING</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert internal table to string format</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>RECIPIENT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Email recipient</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>RECIPIENTS</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Email recipients</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>SEND_EMAIL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Send Email</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>SEND_INDUCTION_EMAIL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Send welcome/induction email on hiring via ZHR_PS</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_EMAIL</CLSNAME>
+     <CMPNAME>TAB_TO_SPOOL</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Generate Spool from Internal table - for use in pdf attchmnt</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
+  </asx:values>
+ </asx:abap>
+</abapGit>

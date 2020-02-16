@@ -1,0 +1,43 @@
+FUNCTION ZSUSR_TCODES_LIST.
+*"--------------------------------------------------------------------
+*"*"Local Interface:
+*"  IMPORTING
+*"     VALUE(SELTYPE)
+*"     VALUE(NAME)
+*"     VALUE(NAME2) OPTIONAL
+*"  TABLES
+*"      TCODES STRUCTURE  USSEL
+*"--------------------------------------------------------------------
+* herauskommentiertes Coding: vor 14.01.97 ms
+*"----------------------------------------------------------------------
+  DATA:  TCD_LIN   TYPE I VALUE 0.
+  DATA:  BEGIN OF IT_TSTCT OCCURS 0,
+           TCODE LIKE TSTCT-TCODE,
+           TTEXT LIKE TSTCT-TTEXT,
+         END OF IT_TSTCT.
+  DATA:  WA_TSTCT LIKE LINE OF IT_TSTCT.
+  SORT TCODES BY LOW.
+  REFRESH: TEMPTSTCT.
+  DESCRIBE TABLE TCODES LINES TCD_LIN.
+  SELECT TCODE TTEXT FROM TSTCT INTO TABLE IT_TSTCT
+    WHERE SPRSL = SY-LANGU
+    ORDER BY TCODE.
+  LOOP AT TCODES.
+    TEMPTSTCT-TCODE = TCODES-LOW.
+    READ TABLE IT_TSTCT WITH KEY TCODE = TCODES-LOW
+      INTO WA_TSTCT
+      BINARY SEARCH.
+    IF SY-SUBRC EQ 0.
+      TEMPTSTCT-TTEXT = WA_TSTCT-TTEXT.
+    ELSE.
+      TEMPTSTCT-TTEXT = SPACE.
+    ENDIF.
+    APPEND TEMPTSTCT.
+  ENDLOOP.
+  SORT: TEMPTSTCT.
+  SELTYP = SELTYPE.
+  TITLE1 = NAME.
+  TITLE2 = NAME2.
+  CLEAR FERTIG.
+  CALL SCREEN 254.
+ENDFUNCTION.
