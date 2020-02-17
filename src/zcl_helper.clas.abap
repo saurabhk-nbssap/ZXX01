@@ -120,6 +120,15 @@ public section.
       value(ET_FILES) type FILETABLE
     returning
       value(RV_FILE) type STRING .
+  class-methods FILE_SAVE_DIALOG
+    importing
+      value(IV_WINDOW_TITLE) type STRING default 'Select File'
+      value(IV_FILE_FILTER) type STRING default CL_GUI_FRONTEND_SERVICES=>FILETYPE_ALL
+      value(IV_INITIAL_DIRECTORY) type STRING optional
+      value(IV_DEFAULT_EXTENSION) type STRING optional
+      value(IV_DEFAULT_FILE_NAME) type STRING optional
+    returning
+      value(RV_FILE) type STRING .
   class-methods WRITE_FILE_TO_APP_SERVER
     importing
       value(IV_FRONTEND_FILEPATH) type STRING optional
@@ -140,7 +149,9 @@ public section.
     exporting
       value(EV_FILE_LENGTH) type I
     returning
-      value(RT_DATA) type SOLIX_TAB .
+      value(RT_DATA) type SOLIX_TAB
+    raising
+      ZCX_GENERIC .
   class-methods DELETE_FILE_FROM_APP_SERVER
     importing
       value(IV_APP_SERVER_FILEPATH) type STRING
@@ -1866,6 +1877,75 @@ CLASS ZCL_HELPER IMPLEMENTATION.
   endmethod.
 
 
+  method file_save_dialog.
+
+    data:
+      lv_initial_directory type string,
+      lv_user_action       like cl_gui_frontend_services=>action_ok.
+
+    clear:
+      lv_user_action,
+      rv_file,
+      lv_initial_directory.
+
+    if iv_initial_directory is initial.
+      cl_gui_frontend_services=>get_desktop_directory(
+        changing
+          desktop_directory    = lv_initial_directory " Desktop Directory
+        exceptions
+          cntl_error           = 1                 " Control error
+          error_no_gui         = 2                 " No GUI available
+          not_supported_by_gui = 3                 " GUI does not support this
+          others               = 4 ).
+      if sy-subrc <> 0.
+        message id sy-msgid type sy-msgty number sy-msgno
+          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      else.
+        cl_gui_cfw=>flush(
+          exceptions
+            cntl_system_error = 1 " cntl_system_error
+            cntl_error        = 2 " cntl_error
+            others            = 3 ).
+        if sy-subrc <> 0.
+          message id sy-msgid type sy-msgty number sy-msgno
+            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        endif.
+      endif.
+    endif.
+
+    data(lv_filename) = value string( ).
+    data(lv_path) = value string( ).
+    cl_gui_frontend_services=>file_save_dialog(
+      exporting
+        window_title              = iv_window_title      " Window Title
+        default_extension         = cond #( when iv_default_extension is not initial then iv_default_extension ) " Default Extension
+        default_file_name         = cond #( when iv_default_file_name is not initial then iv_default_file_name ) " Default File Name
+        file_filter               = iv_file_filter       " File Type Filter Table
+        initial_directory         = cond #( when iv_initial_directory is not initial then iv_initial_directory
+                                            else lv_initial_directory ) " Initial Directory " Initial Directory
+        prompt_on_overwrite       = abap_true
+      changing
+        filename                  = lv_filename
+        path                      = lv_path
+        fullpath                  = rv_file          " Path + File Name
+        user_action               = lv_user_action       " User Action (C Class Const ACTION_OK, ACTION_OVERWRITE etc)
+      exceptions
+        cntl_error                = 1                 " Control error
+        error_no_gui              = 2                 " No GUI available
+        not_supported_by_gui      = 3                 " GUI does not support this
+        invalid_default_file_name = 4                 " Invalid default file name
+        others                    = 5 ).
+    if sy-subrc <> 0.
+      message id sy-msgid type sy-msgty number sy-msgno
+        with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    else.
+      if lv_user_action = cl_gui_frontend_services=>action_cancel.
+        message 'File selection cancelled by user' type 'S' display like 'E'.
+      endif.
+    endif.
+  endmethod.
+
+
   method file_selection_dialog.
 
     data:
@@ -2549,7 +2629,182 @@ CLASS ZCL_HELPER IMPLEMENTATION.
   endmethod.
 
 
-  method READ_FILE_FROM_APP_SERVER.
+  method read_file_from_app_server.
+    constants: lc_msg_id           type syst-msgid value '00',
+               lc_msg_no           type syst-msgno value '001',
+               lc_logical_filename type filename-fileintern value 'EHS_FTAPPL_2', " same as that used in CG3Y
+               lc_binary           type c length 10 value 'BIN'.
+
+    data ls_data like line of rt_data.
+
+    data(lv_app_server_filepath) = iv_app_server_filepath.
+    data(lv_frontend_filepath) = iv_frontend_filepath.
+    data(lv_download_prompt) = iv_download_prompt.
+
+    clear:
+      ls_data,
+      ev_file_length,
+      rt_data.
+
+    if lv_app_server_filepath is initial.
+      data(lv_msg) = conv bapi_msg( 'Please supply path of the file on the app server.' ).
+      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+    endif.
+
+    if lv_frontend_filepath is not initial and iv_download_prompt = abap_true.
+      lv_msg = 'Invalid param comb: Frontend path, download prompt'.
+      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+    endif.
+
+* ---- check the authority to read the file from the application server ---- *
+    data(lv_program) = conv authb-program( sy-cprog ).
+    data(lv_auth_filename) = conv authb-filename( lv_app_server_filepath ).
+    call function 'AUTHORITY_CHECK_DATASET'
+      exporting
+        program          = lv_program  " ABAP program in which access occurs
+        activity         = sabc_act_read " Access Type (See Function Documentation)
+        filename         = lv_auth_filename " File name
+      exceptions
+        no_authority     = 1        " You are not authorized for this access
+        activity_unknown = 2        " Access type unknown
+        others           = 3.
+    if sy-subrc <> 0.
+      case sy-subrc.
+        when 1.
+          lv_msg = 'Not authorised to write the file to app server'.
+        when others.
+          lv_msg = 'File open error'.
+      endcase.
+      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+    endif.
+
+* ---- check if the frontend file exists ---- *
+*    if lv_frontend_filepath is not initial.
+*      if not check_file_exists( exporting iv_filepath = lv_frontend_filepath ).
+*        lv_msg = 'Frontend file path does not exist'.
+*        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+*      endif.
+*    endif.
+
+    if not check_file_exists( exporting iv_filepath = lv_app_server_filepath ).
+      lv_msg = 'App server file path does not exist'.
+      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+    endif.
+
+* ---- validate physical filename against logical filename ---- *
+    call function 'FILE_VALIDATE_NAME'
+      exporting
+        logical_filename           = lc_logical_filename
+      changing
+        physical_filename          = lv_app_server_filepath
+      exceptions
+        logical_filename_not_found = 1
+        validation_failed          = 2
+        others                     = 3.
+    if sy-subrc <> 0.
+      message id sy-msgid type sy-msgty number sy-msgno
+        with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
+      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+    endif.
+
+    try.
+        " open the dataset for reading
+        open dataset lv_app_server_filepath for input in binary mode.
+        if sy-subrc = 0.
+          try.
+              do.
+                clear ls_data.
+                read dataset lv_app_server_filepath into ls_data length data(lv_len).
+                if sy-subrc <> 0.
+                  if lv_len > 0.
+                    ev_file_length = ev_file_length + lv_len.
+                    append ls_data to rt_data.
+                  endif.
+                  exit.
+                endif.
+                ev_file_length = ev_file_length + lv_len.
+                append ls_data to rt_data.
+              enddo.
+              try.
+                  " close the dataset after writing
+                  close dataset lv_app_server_filepath.
+
+                  if rt_data is not initial.
+                    if lv_frontend_filepath is not initial or lv_download_prompt = abap_true.
+                      if iv_download_prompt = abap_true.
+                        lv_frontend_filepath = file_save_dialog( ).
+                      endif.
+                      if lv_frontend_filepath is not initial.
+                        cl_gui_frontend_services=>gui_download(
+                          exporting
+                            bin_filesize              = ev_file_length          " File length for binary files
+                            filename                  = lv_frontend_filepath    " Name of file
+                            filetype                  = lc_binary               " File type (ASCII, binary ...)
+                          importing
+                            filelength                = ev_file_length          " Number of bytes transferred
+                          changing
+                            data_tab                  = rt_data                 " Transfer table
+                          exceptions
+                            file_write_error          = 1                    " Cannot write to file
+                            no_batch                  = 2                    " Cannot execute front-end function in background
+                            gui_refuse_filetransfer   = 3                    " Incorrect Front End
+                            invalid_type              = 4                    " Invalid value for parameter FILETYPE
+                            no_authority              = 5                    " No Download Authorization
+                            unknown_error             = 6                    " Unknown error
+                            header_not_allowed        = 7                    " Invalid header
+                            separator_not_allowed     = 8                    " Invalid separator
+                            filesize_not_allowed      = 9                    " Invalid file size
+                            header_too_long           = 10                   " Header information currently restricted to 1023 bytes
+                            dp_error_create           = 11                   " Cannot create DataProvider
+                            dp_error_send             = 12                   " Error Sending Data with DataProvider
+                            dp_error_write            = 13                   " Error Writing Data with DataProvider
+                            unknown_dp_error          = 14                   " Error when calling data provider
+                            access_denied             = 15                   " Access to File Denied
+                            dp_out_of_memory          = 16                   " Not enough memory in data provider
+                            disk_full                 = 17                   " Storage medium is full.
+                            dp_timeout                = 18                   " Data provider timeout
+                            file_not_found            = 19                   " Could not find file
+                            dataprovider_exception    = 20                   " General Exception Error in DataProvider
+                            control_flush_error       = 21                   " Error in Control Framework
+                            not_supported_by_gui      = 22                   " GUI does not support this
+                            error_no_gui              = 23                   " GUI not available
+                            others                    = 24 ).
+                        if sy-subrc <> 0.
+                          message id sy-msgid type sy-msgty number sy-msgno
+                            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
+                          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                        endif.
+                      else.
+                        lv_msg = 'Frontend file path not supplied/selected'.
+                        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                      endif.
+                    endif.
+                  endif.
+                catch cx_sy_file_close into data(lox_file_close).
+                  lv_msg = lox_file_close->get_text( ).
+                  raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+              endtry.
+            catch cx_sy_file_io into data(lox_file_io).
+              lv_msg = lox_file_io->get_text( ).
+              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+            catch cx_sy_file_open_mode into data(lox_file_open_mode).
+              lv_msg = lox_file_open_mode->get_text( ).
+              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+          endtry.
+        else.
+          lv_msg = 'File open error'.
+          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+        endif.
+      catch cx_sy_file_authority into data(lox_file_authority).
+        lv_msg = lox_file_authority->get_text( ).
+        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+      catch cx_sy_file_open into data(lox_file_open).
+        lv_msg = lox_file_open->get_text( ).
+        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+      catch cx_sy_too_many_files into data(lox_too_many_files).
+        lv_msg = lox_too_many_files->get_text( ).
+        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+    endtry.
   endmethod.
 
 

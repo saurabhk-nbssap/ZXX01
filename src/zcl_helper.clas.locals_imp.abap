@@ -337,7 +337,57 @@ class lcl_helper implementation.
     if iv_filename is not initial.
       data(lo_imp_excel) = new cl_mass_spsh_file_imp_excel( ).
       if lo_imp_excel is bound.
-        lo_imp_excel->set_file( exporting iv_file = conv #( iv_filename ) ). "usual filepath, gotten by cl_gui_frontend_services=>file_open_dialog
+        try.
+            data(lo_path) = cl_fs_path=>create(
+                              name           = conv #( iv_filename )
+                              path_kind      = cl_fs_path=>path_kind_smart ).
+
+            if lo_path is bound.
+              case lo_path->separator_actual.
+                when '\'. " windows
+                  lo_imp_excel->set_file( exporting iv_file = conv #( iv_filename ) ). "usual filepath, gotten by cl_gui_frontend_services=>file_open_dialog
+                when '/'. " unix
+                  try.
+                      data(lv_temp_dir) = value string( ).
+                      cl_gui_frontend_services=>get_temp_directory(
+                        changing
+                          temp_dir             = lv_temp_dir " Temporary Directory
+                        exceptions
+                          cntl_error           = 1        " Control error
+                          error_no_gui         = 2        " No GUI available
+                          not_supported_by_gui = 3        " GUI does not support this
+                          others               = 4 ).
+                      if sy-subrc <> 0.
+                        message id sy-msgid type sy-msgty number sy-msgno
+                          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+                      else.
+                        cl_gui_cfw=>flush(
+                          exceptions
+                            cntl_system_error = 1 " cntl_system_error
+                            cntl_error        = 2 " cntl_error
+                            others            = 3 ).
+                        if sy-subrc <> 0.
+                          message id sy-msgid type sy-msgty number sy-msgno
+                            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+                        else.
+                          data(lv_temp_file) = |{ lv_temp_dir }\\sap_data_{ sy-datum }_{ sy-uzeit }.xls|.
+                        endif.
+                      endif.
+
+                      zcl_helper=>read_file_from_app_server(
+                        exporting
+                          iv_app_server_filepath = conv #( iv_filename ) " File path on app server(AL11)
+                          iv_frontend_filepath = conv #( lv_temp_file ) ).
+
+                      lo_imp_excel->set_file( exporting iv_file = conv #( lv_temp_file ) ).
+
+                    catch zcx_generic. " Generic Exception Class
+                  endtry.
+                when others.
+              endcase.
+            endif.
+          catch cx_smart_path_syntax. " Syntax error in smart path
+        endtry.
       endif.
 
       try.
@@ -360,6 +410,39 @@ class lcl_helper implementation.
         catch cx_mass_spreadsheet into data(lox_mass_spreadsheet).
           message lox_mass_spreadsheet->get_longtext( ) type 'E' display like 'I'.
       endtry.
+
+      if lv_temp_file is not initial and zcl_helper=>check_file_exists( exporting iv_filepath = lv_temp_file ).
+        data(lv_rc) = value i( ).
+        cl_gui_frontend_services=>file_delete(
+          exporting
+            filename             = lv_temp_file " Name of the file to be deleted
+          changing
+            rc                   = lv_rc
+          exceptions
+            file_delete_failed   = 1        " Could not delete file
+            cntl_error           = 2        " Control error
+            error_no_gui         = 3        " Error: No GUI
+            file_not_found       = 4        " File not found
+            access_denied        = 5        " Access denied
+            unknown_error        = 6        " Unknown error
+            not_supported_by_gui = 7        " GUI does not support this
+            wrong_parameter      = 8        " Wrong parameter
+            others               = 9 ).
+        if sy-subrc <> 0.
+          message id sy-msgid type sy-msgty number sy-msgno
+            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        else.
+          cl_gui_cfw=>flush(
+            exceptions
+              cntl_system_error = 1 " cntl_system_error
+              cntl_error        = 2 " cntl_error
+              others            = 3 ).
+          if sy-subrc <> 0.
+            message id sy-msgid type sy-msgty number sy-msgno
+              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          endif.
+        endif.
+      endif.
     endif.
   endmethod.
 
@@ -368,7 +451,38 @@ class lcl_helper implementation.
 
     if iv_filename is not initial.
       try.
-          data(lv_data_xstr) = cl_ehfnd_file_util=>upload_file( exporting iv_file_name = conv #( iv_filename ) ).
+          try.
+              data(lo_path) = cl_fs_path=>create(
+                                name           = conv #( iv_filename )
+                                path_kind      = cl_fs_path=>path_kind_smart ).
+
+              if lo_path is bound.
+                case lo_path->separator_actual.
+                  when '\'. " windows
+                    data(lv_data_xstr) = cl_ehfnd_file_util=>upload_file( exporting iv_file_name = conv #( iv_filename ) ).
+                  when '/'. " unix
+                    try.
+                        data(lv_file_size) = value i( ).
+                        data(lt_data) = zcl_helper=>read_file_from_app_server(
+                                          exporting
+                                            iv_app_server_filepath = iv_filename " File path on app server(AL11)
+                                          importing
+                                            ev_file_length         = lv_file_size ).         " Binary file length
+
+                        if lt_data is not initial.
+                          lv_data_xstr = cl_bcs_convert=>solix_to_xstring(
+                                           exporting
+                                             it_solix = lt_data
+                                             iv_size  = lv_file_size ).
+                        endif.
+                      catch zcx_generic. " Generic Exception Class
+                    endtry.
+                  when others.
+                endcase.
+              endif.
+            catch cx_smart_path_syntax. " Syntax error in smart path
+          endtry.
+
           data(lo_xlsx) = cl_ehfnd_xlsx=>get_instance( ).
           if lo_xlsx is bound and lv_data_xstr is not initial.
             try.

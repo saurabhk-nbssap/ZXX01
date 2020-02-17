@@ -100,9 +100,15 @@
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>FILE_SAVE_DIALOG</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Select file from frontend for saving data</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
      <CMPNAME>FILE_SELECTION_DIALOG</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Select file from frontend</DESCRIPT>
+     <DESCRIPT>Select file from frontend for reading data</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
