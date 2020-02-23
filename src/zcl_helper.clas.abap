@@ -29,6 +29,15 @@ public section.
       end of ty_sheet .
   types:
     tty_sheet type table of ty_sheet with default key .
+  types:
+    begin of ty_excel,
+        sheet_name type string,
+        rows       type i,
+        cols       type i,
+        data_tab   type ref to data,
+      end of ty_excel .
+  types:
+    tty_excel type table of ty_excel with default key .
 
   constants:
     begin of gc_s_sheet_number,
@@ -174,6 +183,9 @@ public section.
       value(IV_MOVE_CORRESPONDING) type ABAP_BOOL default ABAP_FALSE
       value(IV_WITH_CONV_EXIT) type ABAP_BOOL default ABAP_FALSE
       value(IV_SHEET_NUMBER) type I default GC_S_SHEET_NUMBER-DEFAULT
+      value(IV_READ_ALL_SHEETS) type ABAP_BOOL default ABAP_FALSE
+    exporting
+      value(ET_EXCEL) type TTY_EXCEL
     changing
       value(CT_ITAB) type STANDARD TABLE .
   class-methods ITAB_TO_EXCEL
@@ -1694,14 +1706,12 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 *               lc_xlsx_end_row type i value 1048576,
 *               lc_xlsx_end_col type i value 16384.
 
-    do 20 times.
-      cl_progress_indicator=>progress_indicate(
-        exporting
-          i_text               = |Uploading & converting excel data...|               " Progress Text (If no message transferred in I_MSG*)
-          i_processed          = 50               " Number of Objects Already Processed
-          i_total              = 100              " Total Number of Objects to Be Processed
-          i_output_immediately = abap_true ).     " X = Display Progress Immediately
-    enddo.
+    cl_progress_indicator=>progress_indicate(
+      exporting
+        i_text               = |Uploading & converting excel data...|               " Progress Text (If no message transferred in I_MSG*)
+        i_processed          = 1                " Number of Objects Already Processed
+        i_total              = 2                " Total Number of Objects to Be Processed
+        i_output_immediately = abap_true ).     " X = Display Progress Immediately
 
     data(lo_table)  = cast cl_abap_tabledescr( cl_abap_structdescr=>describe_by_data( ct_itab ) ).
     if lo_table is bound.
@@ -1726,6 +1736,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 *    data(i_end_col) = lines( lt_comp ).
 *    data(i_begin_col) = 1.
 
+    data: lt_sheets type if_mass_spreadsheet_types=>t_spreadsheet_by_sheetname.
+    clear lt_sheets.
+
     if lo_helper is bound.
       case to_upper( lv_file_ext ).
         when 'XLS'.
@@ -1749,7 +1762,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
           data(lt_excel) = lo_helper->excel_to_itab_mass_spreadsheet(
                              exporting
                                iv_filename = conv #( iv_file )
-                               iv_sheet_no = iv_sheet_number ).
+                               iv_sheet_no = iv_sheet_number
+                             importing
+                               et_sheets   = lt_sheets ).
         when 'XLSX'.
 *        data: lt_tab_raw_data type truxs_t_text_data.
 *
@@ -1770,93 +1785,123 @@ CLASS ZCL_HELPER IMPLEMENTATION.
           lt_excel = lo_helper->excel_to_itab_ehfnd(
                        exporting
                          iv_filename = conv #( iv_file )
-                         iv_sheet_no = iv_sheet_number ).
+                         iv_sheet_no = iv_sheet_number
+                         iv_read_all_sheets = iv_read_all_sheets
+                       importing
+                         et_sheets   = lt_sheets ).
       endcase.
     endif.
 
-    delete lt_excel where row <= iv_no_of_headers.
+    if lt_excel is not initial.
+      cl_progress_indicator=>progress_indicate(
+        exporting
+          i_text               = 'Transposing excel data to internal table'  " Progress Text (If no message transferred in I_MSG*)
+          i_processed          = 1                                      " Number of Objects Already Processed
+          i_total              = 2                                      " Total Number of Objects to Be Processed
+          i_output_immediately = abap_true ).                           " X = Display Progress Immediately
 
-    if iv_move_corresponding = abap_true.
-      " check file format here
+      delete lt_excel where row <= iv_no_of_headers.
 
-      " move corresponding implementation
-      data:
-        begin of ls_map,
-          excel_index type i,
-          itab_index  type i,
-        end of ls_map,
-        lt_map like sorted table of ls_map with unique key primary_key components excel_index.
+      if iv_move_corresponding = abap_true.
+        " check file format here
 
-      clear: lt_map.
-      loop at lt_excel into data(ls_excel) where row = 1. " header row
-        data(lv_col) = condense( to_upper( ls_excel-value ) ).
+        " move corresponding implementation
+        data:
+          begin of ls_map,
+            excel_index type i,
+            itab_index  type i,
+          end of ls_map,
+          lt_map like sorted table of ls_map with unique key primary_key components excel_index.
+
+        clear: lt_map.
+        loop at lt_excel into data(ls_excel) where row = 1. " header row
+          data(lv_col) = condense( to_upper( ls_excel-value ) ).
 
 *        if lv_col is not initial.
-        read table lt_comp into data(ls_comp) with key name = lv_col.
-        if sy-subrc = 0.
-          clear: ls_map.
-          ls_map-excel_index = ls_excel-col.
-          ls_map-itab_index = sy-tabix.
-          append ls_map to lt_map.
-        else.
-          if iv_check_file_format = abap_true.
-            message |{ lv_col }: Unknown column in excel. No corresponding field found in internal structure.| type 'I' display like 'E'.
-            return.
+          read table lt_comp into data(ls_comp) with key name = lv_col.
+          if sy-subrc = 0.
+            clear: ls_map.
+            ls_map-excel_index = ls_excel-col.
+            ls_map-itab_index = sy-tabix.
+            append ls_map to lt_map.
+          else.
+            if iv_check_file_format = abap_true.
+              message |{ lv_col }: Unknown column in excel. No corresponding field found in internal structure.| type 'I' display like 'E'.
+              return.
+            endif.
           endif.
-        endif.
 *        endif.
-        clear ls_excel.
-      endloop.
+          clear ls_excel.
+        endloop.
 
-      if lt_map is not initial.
-        delete lt_excel where row = 1.
+        if lt_map is not initial.
+          delete lt_excel where row = 1.
+        else.
+          message |Excel must contain header row with column names matching internal field names.| type 'I' display like 'E'.
+          return.
+        endif.
+
+        if lt_excel is not initial and lt_map is not initial.
+          loop at lt_excel into ls_excel.
+            at new row.
+              append initial line to ct_itab assigning field-symbol(<ls_itab>).
+              if <ls_itab> is assigned.
+                clear <ls_itab>.
+              endif.
+            endat.
+            clear index.
+            try.
+                index = lt_map[ key primary_key excel_index = ls_excel-col ]-itab_index.
+*        move ls_excel-col to index.
+                assign component index of structure <ls_itab> to field-symbol(<fs>).
+                if sy-subrc = 0 and <fs> is assigned. " Incase there are more xls columns than fields
+                  move ls_excel-value to <fs>.
+                endif.
+              catch cx_sy_itab_line_not_found ##no_handler.
+            endtry.
+            clear ls_excel.
+            unassign <fs>.
+          endloop.
+        endif.
       else.
-        message |Excel must contain header row with column names matching internal field names.| type 'I' display like 'E'.
-        return.
+        " move sequential implemetation
+        if lt_excel is not initial.
+          unassign <ls_itab>.
+          loop at lt_excel into ls_excel.
+            at new row.
+              append initial line to ct_itab assigning <ls_itab>.
+              if <ls_itab> is assigned.
+                clear <ls_itab>.
+              endif.
+            endat.
+            clear index.
+            move ls_excel-col to index.
+            assign component index of structure <ls_itab> to <fs>.
+            if sy-subrc = 0 and <fs> is assigned. " Incase there are more xls columns than fields
+              move ls_excel-value to <fs>.
+            endif.
+            clear ls_excel.
+            unassign <fs>.
+          endloop.
+        endif.
       endif.
 
-      if lt_excel is not initial and lt_map is not initial.
-        loop at lt_excel into ls_excel.
-          at new row.
-            append initial line to ct_itab assigning field-symbol(<ls_itab>).
-            if <ls_itab> is assigned.
-              clear <ls_itab>.
-            endif.
-          endat.
-          clear index.
+      if ct_itab is not initial and iv_read_all_sheets = abap_false.
+        append initial line to et_excel assigning field-symbol(<ls_excel>).
+        if <ls_excel> is assigned.
           try.
-              index = lt_map[ key primary_key excel_index = ls_excel-col ]-itab_index.
-*        move ls_excel-col to index.
-              assign component index of structure <ls_itab> to field-symbol(<fs>).
-              if sy-subrc = 0 and <fs> is assigned. " Incase there are more xls columns than fields
-                move ls_excel-value to <fs>.
-              endif.
+              data(ls_sheet) = lt_sheets[ cond #( when lines( lt_sheets ) gt 1 then iv_sheet_number else 1 ) ].
+              <ls_excel> = value #( sheet_name = ls_sheet-sheetname
+                                    rows       = ls_sheet-num_rows
+                                    cols       = ls_sheet-num_cols
+                                    data_tab   = ref #( ct_itab ) ).
             catch cx_sy_itab_line_not_found ##no_handler.
           endtry.
-          clear ls_excel.
-          unassign <fs>.
-        endloop.
+        endif.
       endif.
-    else.
-      " move sequential implemetation
-      if lt_excel is not initial.
-        unassign <ls_itab>.
-        loop at lt_excel into ls_excel.
-          at new row.
-            append initial line to ct_itab assigning <ls_itab>.
-            if <ls_itab> is assigned.
-              clear <ls_itab>.
-            endif.
-          endat.
-          clear index.
-          move ls_excel-col to index.
-          assign component index of structure <ls_itab> to <fs>.
-          if sy-subrc = 0 and <fs> is assigned. " Incase there are more xls columns than fields
-            move ls_excel-value to <fs>.
-          endif.
-          clear ls_excel.
-          unassign <fs>.
-        endloop.
+
+      if iv_read_all_sheets = abap_true and lt_sheets is not initial.
+        et_excel = lo_helper->sheets_to_itabs( exporting it_sheets = lt_sheets ).
       endif.
 
       check ct_itab is not initial and iv_check_file_format eq abap_true.
@@ -2583,7 +2628,6 @@ CLASS ZCL_HELPER IMPLEMENTATION.
             endif.
           else.
             message 'No folder selected' type 'S' display like 'E'.
-            return.
           endif.
         endif.
       endif.
@@ -2726,7 +2770,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                 append ls_data to rt_data.
               enddo.
               try.
-                  " close the dataset after writing
+                  " close the dataset after reading
                   close dataset lv_app_server_filepath.
 
                   if rt_data is not initial.
@@ -2773,6 +2817,10 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                           message id sy-msgid type sy-msgty number sy-msgno
                             with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
                           raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                        else.
+                          if check_file_exists( exporting iv_filepath = lv_frontend_filepath ).
+*                            message 'File downloaded successfully' type 'S'.
+                          endif.
                         endif.
                       else.
                         lv_msg = 'Frontend file path not supplied/selected'.

@@ -42,15 +42,38 @@ class lcl_helper definition final.
         importing
           value(iv_filename) type if_mass_spreadsheet_types=>file_name
           value(iv_sheet_no) type i default 1
+        exporting
+          value(et_sheets)   type if_mass_spreadsheet_types=>t_spreadsheet_by_sheetname
         returning
           value(rt_excel)    like gt_excel,
 
       excel_to_itab_ehfnd
         importing
-          value(iv_filename) type string
-          value(iv_sheet_no) type i default 1
+          value(iv_filename)        type string
+          value(iv_sheet_no)        type i default 1
+          value(iv_read_all_sheets) type abap_bool default abap_false
+        exporting
+          value(et_sheets)          type if_mass_spreadsheet_types=>t_spreadsheet_by_sheetname
         returning
-          value(rt_excel)    like gt_excel,
+          value(rt_excel)           like gt_excel,
+
+      sheets_to_itabs
+        importing
+          value(it_sheets)     type if_mass_spreadsheet_types=>t_spreadsheet_by_sheetname
+        returning
+          value(rt_excel_itab) type zcl_helper=>tty_excel,
+
+      sheet_to_itab
+        importing
+          value(it_sheet) type if_mass_spreadsheet_types=>t_spreadsheet
+        returning
+          value(rr_data)  type ref to data,
+
+      generate_table_type
+        importing
+          value(it_fields) type string_table
+        returning
+          value(rr_data)   type ref to data,
 
       itab_to_excel_ehfnd
         importing
@@ -337,60 +360,81 @@ class lcl_helper implementation.
     if iv_filename is not initial.
       data(lo_imp_excel) = new cl_mass_spsh_file_imp_excel( ).
       if lo_imp_excel is bound.
-        try.
-            data(lo_path) = cl_fs_path=>create(
-                              name           = conv #( iv_filename )
-                              path_kind      = cl_fs_path=>path_kind_smart ).
+        data(lv_file_path_type) = cond #( when iv_filename ca '\' then 'W'
+                                          when iv_filename ca '/' then 'U' ).
 
-            if lo_path is bound.
-              case lo_path->separator_actual.
-                when '\'. " windows
-                  lo_imp_excel->set_file( exporting iv_file = conv #( iv_filename ) ). "usual filepath, gotten by cl_gui_frontend_services=>file_open_dialog
-                when '/'. " unix
-                  try.
-                      data(lv_temp_dir) = value string( ).
-                      cl_gui_frontend_services=>get_temp_directory(
-                        changing
-                          temp_dir             = lv_temp_dir " Temporary Directory
-                        exceptions
-                          cntl_error           = 1        " Control error
-                          error_no_gui         = 2        " No GUI available
-                          not_supported_by_gui = 3        " GUI does not support this
-                          others               = 4 ).
-                      if sy-subrc <> 0.
-                        message id sy-msgid type sy-msgty number sy-msgno
-                          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-                      else.
-                        cl_gui_cfw=>flush(
-                          exceptions
-                            cntl_system_error = 1 " cntl_system_error
-                            cntl_error        = 2 " cntl_error
-                            others            = 3 ).
-                        if sy-subrc <> 0.
-                          message id sy-msgid type sy-msgty number sy-msgno
-                            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-                        else.
-                          data(lv_temp_file) = |{ lv_temp_dir }\\sap_data_{ sy-datum }_{ sy-uzeit }.xls|.
-                        endif.
-                      endif.
+        case lv_file_path_type.
+          when 'W'. " windows
 
-                      zcl_helper=>read_file_from_app_server(
-                        exporting
-                          iv_app_server_filepath = conv #( iv_filename ) " File path on app server(AL11)
-                          iv_frontend_filepath = conv #( lv_temp_file ) ).
+            cl_progress_indicator=>progress_indicate(
+              exporting
+                i_text               = 'Loading file from frontend'           " Progress Text (If no message transferred in I_MSG*)
+                i_processed          = 1                                      " Number of Objects Already Processed
+                i_total              = 2                                      " Total Number of Objects to Be Processed
+                i_output_immediately = abap_true ).                           " X = Display Progress Immediately
 
-                      lo_imp_excel->set_file( exporting iv_file = conv #( lv_temp_file ) ).
+            lo_imp_excel->set_file( exporting iv_file = conv #( iv_filename ) ). "usual filepath, gotten by cl_gui_frontend_services=>file_open_dialog
+          when 'U'. " unix
 
-                    catch zcx_generic. " Generic Exception Class
-                  endtry.
-                when others.
-              endcase.
-            endif.
-          catch cx_smart_path_syntax. " Syntax error in smart path
-        endtry.
+            cl_progress_indicator=>progress_indicate(
+              exporting
+                i_text               = 'Loading file from app server'         " Progress Text (If no message transferred in I_MSG*)
+                i_processed          = 1                                      " Number of Objects Already Processed
+                i_total              = 2                                      " Total Number of Objects to Be Processed
+                i_output_immediately = abap_true ).                           " X = Display Progress Immediately
+
+            try.
+                data(lv_temp_dir) = value string( ).
+                cl_gui_frontend_services=>get_temp_directory(
+                  changing
+                    temp_dir             = lv_temp_dir " Temporary Directory
+                  exceptions
+                    cntl_error           = 1        " Control error
+                    error_no_gui         = 2        " No GUI available
+                    not_supported_by_gui = 3        " GUI does not support this
+                    others               = 4 ).
+                if sy-subrc <> 0.
+                  message id sy-msgid type sy-msgty number sy-msgno
+                    with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+                else.
+                  cl_gui_cfw=>flush(
+                    exceptions
+                      cntl_system_error = 1 " cntl_system_error
+                      cntl_error        = 2 " cntl_error
+                      others            = 3 ).
+                  if sy-subrc <> 0.
+                    message id sy-msgid type sy-msgty number sy-msgno
+                      with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+                  else.
+                    data(lv_temp_file) = |{ lv_temp_dir }\\sap_data_{ sy-datum }_{ sy-uzeit }.xls|.
+                  endif.
+                endif.
+
+                zcl_helper=>read_file_from_app_server(
+                  exporting
+                    iv_app_server_filepath = conv #( iv_filename ) " File path on app server(AL11)
+                    iv_frontend_filepath = conv #( lv_temp_file ) ).
+
+                if zcl_helper=>check_file_exists( exporting iv_filepath = lv_temp_file ).
+                  lo_imp_excel->set_file( exporting iv_file = conv #( lv_temp_file ) ).
+                endif.
+
+              catch zcx_generic into data(lox_generic). " Generic Exception Class
+                message lox_generic type 'S' display like 'E'.
+                return.
+            endtry.
+          when others.
+        endcase.
       endif.
 
       try.
+          cl_progress_indicator=>progress_indicate(
+            exporting
+              i_text               = 'Importing and converting excel data'  " Progress Text (If no message transferred in I_MSG*)
+              i_processed          = 1                                      " Number of Objects Already Processed
+              i_total              = 2                                      " Total Number of Objects to Be Processed
+              i_output_immediately = abap_true ).                           " X = Display Progress Immediately
+
           data(lo_excel) = cast cl_mass_spreadsheet( lo_imp_excel->if_mass_spreadsheet_import~import(
                                                        exporting io_imp_conf = cl_mass_spsh_imp_conf_excel=>create_default_config( ) ) ).
 
@@ -401,6 +445,8 @@ class lcl_helper implementation.
           lo_excel->if_mass_spreadsheet~get_data(
             importing
               et_data = data(lt_data) ).
+
+          et_sheets = lt_data.
 
           try.
               data(lt_excel) = lt_data[ iv_sheet_no ]-spreadsheet.
@@ -447,41 +493,64 @@ class lcl_helper implementation.
   endmethod.
 
   method excel_to_itab_ehfnd.
-    clear rt_excel.
+    clear:
+      rt_excel,
+      et_sheets.
+
+    data(lt_excel) = rt_excel.
 
     if iv_filename is not initial.
       try.
-          try.
-              data(lo_path) = cl_fs_path=>create(
-                                name           = conv #( iv_filename )
-                                path_kind      = cl_fs_path=>path_kind_smart ).
+          data(lv_file_path_type) = cond #( when iv_filename ca '\' then 'W'
+                                            when iv_filename ca '/' then 'U' ).
 
-              if lo_path is bound.
-                case lo_path->separator_actual.
-                  when '\'. " windows
-                    data(lv_data_xstr) = cl_ehfnd_file_util=>upload_file( exporting iv_file_name = conv #( iv_filename ) ).
-                  when '/'. " unix
-                    try.
-                        data(lv_file_size) = value i( ).
-                        data(lt_data) = zcl_helper=>read_file_from_app_server(
-                                          exporting
-                                            iv_app_server_filepath = iv_filename " File path on app server(AL11)
-                                          importing
-                                            ev_file_length         = lv_file_size ).         " Binary file length
+          case lv_file_path_type.
+            when 'W'. " windows
 
-                        if lt_data is not initial.
-                          lv_data_xstr = cl_bcs_convert=>solix_to_xstring(
-                                           exporting
-                                             it_solix = lt_data
-                                             iv_size  = lv_file_size ).
-                        endif.
-                      catch zcx_generic. " Generic Exception Class
-                    endtry.
-                  when others.
-                endcase.
-              endif.
-            catch cx_smart_path_syntax. " Syntax error in smart path
-          endtry.
+              cl_progress_indicator=>progress_indicate(
+                exporting
+                  i_text               = 'Loading file from frontend'           " Progress Text (If no message transferred in I_MSG*)
+                  i_processed          = 1                                      " Number of Objects Already Processed
+                  i_total              = 2                                      " Total Number of Objects to Be Processed
+                  i_output_immediately = abap_true ).                           " X = Display Progress Immediately
+
+              data(lv_data_xstr) = cl_ehfnd_file_util=>upload_file( exporting iv_file_name = conv #( iv_filename ) ).
+            when 'U'. " unix
+
+              cl_progress_indicator=>progress_indicate(
+                  exporting
+                    i_text               = 'Loading file from app server'         " Progress Text (If no message transferred in I_MSG*)
+                    i_processed          = 1                                      " Number of Objects Already Processed
+                    i_total              = 2                                      " Total Number of Objects to Be Processed
+                    i_output_immediately = abap_true ).                           " X = Display Progress Immediately
+
+              try.
+                  data(lv_file_size) = value i( ).
+                  data(lt_data) = zcl_helper=>read_file_from_app_server(
+                                    exporting
+                                      iv_app_server_filepath = iv_filename " File path on app server(AL11)
+                                    importing
+                                      ev_file_length         = lv_file_size ).         " Binary file length
+
+                  if lt_data is not initial.
+                    lv_data_xstr = cl_bcs_convert=>solix_to_xstring(
+                                     exporting
+                                       it_solix = lt_data
+                                       iv_size  = lv_file_size ).
+                  endif.
+                catch zcx_generic into data(lox_generic). " Generic Exception Class
+                  message lox_generic type 'S' display like 'E'.
+                  return.
+              endtry.
+            when others.
+          endcase.
+
+          cl_progress_indicator=>progress_indicate(
+            exporting
+              i_text               = 'Importing and converting excel data'  " Progress Text (If no message transferred in I_MSG*)
+              i_processed          = 1                                      " Number of Objects Already Processed
+              i_total              = 2                                      " Total Number of Objects to Be Processed
+              i_output_immediately = abap_true ).                           " X = Display Progress Immediately
 
           data(lo_xlsx) = cl_ehfnd_xlsx=>get_instance( ).
           if lo_xlsx is bound and lv_data_xstr is not initial.
@@ -489,42 +558,103 @@ class lcl_helper implementation.
                 data(lo_doc) = lo_xlsx->load_doc( exporting iv_file_data = lv_data_xstr ).
                 if lo_doc is bound.
                   data(lt_sheet_info) = lo_doc->get_sheets( ).
-                  if line_exists( lt_sheet_info[ sheet_id = iv_sheet_no ] ).
+
+                  " The above method reads sheets in reverse order; meaning the sheets are numbered incorrectly(reversed)
+                  " Following is the swapping algo to correct the sequence
+                  " Sheet id's of the 1st half of the table are swapped with the corresponding 2nd half of the table...
+                  " ...without altering the sheet names
+                  do conv i( lines( lt_sheet_info ) / 2 ) times.
                     try.
-                        data(lo_sheet) = lo_doc->get_sheet_by_id( exporting iv_sheet_id = iv_sheet_no ).
-                        if lo_sheet is bound.
-*                          if lo_sheet->has_cell_content( exporting iv_column = 1 iv_row = 1 ).
-                          data(lv_column_count) = lo_sheet->get_last_column_number_in_row( exporting iv_row = 1 ).
-                          data(lv_row_count) = lo_sheet->get_last_row_number( ).
-                          if lv_column_count is not initial and lv_row_count is not initial.
-                            do lv_row_count times.
-                              data(lv_row_index) = sy-index.
-                              do lv_column_count times.
-                                append initial line to rt_excel assigning field-symbol(<ls_excel>).
-                                if <ls_excel> is assigned.
-                                  data(lv_column_index) = sy-index.
-                                  <ls_excel>-row = lv_row_index.
-                                  <ls_excel>-col = lv_column_index.
-                                  <ls_excel>-value = conv #( lo_sheet->get_cell_content(
-                                                               exporting
-                                                                 iv_row = lv_row_index
-                                                                 iv_column = lv_column_index ) ).
-                                endif.
-                                clear lv_column_index.
-                              enddo.
-                              clear lv_row_index.
-                            enddo.
+                        assign lt_sheet_info[ sy-index ] to field-symbol(<ls_sheet_info_top>).
+                        if <ls_sheet_info_top> is assigned.
+                          data(ls_sheet_info_swap) = <ls_sheet_info_top>.
+                          assign lt_sheet_info[ lines( lt_sheet_info ) - ( sy-index - 1 )  ] to field-symbol(<ls_sheet_info_bot>).
+                          if <ls_sheet_info_bot> is assigned.
+                            <ls_sheet_info_top> = corresponding #( base ( <ls_sheet_info_top> ) <ls_sheet_info_bot> except name ).
+                            <ls_sheet_info_bot> = corresponding #( base ( <ls_sheet_info_bot> ) ls_sheet_info_swap except name ).
                           endif.
-*                          endif.
                         endif.
-                      catch cx_openxml_format into data(lox_openxml_format).    " Packaging Error - Invalid Content
-                      catch cx_openxml_not_found into data(lox_openxml_not_found). " Part not found
+                      catch cx_sy_itab_line_not_found.
                     endtry.
+
+                    clear ls_sheet_info_swap.
+
+                    unassign:
+                      <ls_sheet_info_top>,
+                      <ls_sheet_info_bot>.
+                  enddo.
+
+                  sort lt_sheet_info ascending by sheet_id.
+
+                  if line_exists( lt_sheet_info[ sheet_id = iv_sheet_no ] ).
+                    if iv_read_all_sheets = abap_false.
+                      delete lt_sheet_info where sheet_id <> iv_sheet_no.
+                    endif.
+
+                    loop at lt_sheet_info into data(ls_sheet_info).
+                      clear lt_excel.
+                      try.
+                          " sheet id's are still in reverse order in the internal attributes of the ehfnd class
+                          " we fetch the corresponding sheet data using the corrected sheet id
+                          data(lo_sheet) = lo_doc->get_sheet_by_id(
+                                             exporting
+                                               iv_sheet_id = lines( lt_sheet_info ) - ( ls_sheet_info-sheet_id - 1 ) ).
+                          if lo_sheet is bound.
+                            " all sheets table
+                            append initial line to et_sheets assigning field-symbol(<ls_sheet>).
+                            if <ls_sheet> is assigned.
+*                          if lo_sheet->has_cell_content( exporting iv_column = 1 iv_row = 1 ).
+                              data(lv_column_count) = lo_sheet->get_last_column_number_in_row( exporting iv_row = 1 ).
+                              data(lv_row_count) = lo_sheet->get_last_row_number( ).
+                              if lv_column_count is not initial and lv_row_count is not initial.
+                                <ls_sheet> = value #( sheetname = ls_sheet_info-name
+                                                      num_rows  = lv_row_count
+                                                      num_cols  = lv_column_count ).
+                                do lv_row_count times.
+                                  data(lv_row_index) = sy-index.
+                                  do lv_column_count times.
+                                    append initial line to lt_excel assigning field-symbol(<ls_excel>).
+                                    if <ls_excel> is assigned.
+                                      data(lv_column_index) = sy-index.
+                                      <ls_excel>-row = lv_row_index.
+                                      <ls_excel>-col = lv_column_index.
+                                      <ls_excel>-value = conv #( lo_sheet->get_cell_content(
+                                                                   exporting
+                                                                     iv_row = lv_row_index
+                                                                     iv_column = lv_column_index ) ).
+                                    endif.
+                                    clear lv_column_index.
+                                    unassign <ls_excel>.
+                                  enddo.
+                                  clear lv_row_index.
+                                enddo.
+                                <ls_sheet>-spreadsheet = corresponding #( lt_excel mapping row = row column = col value = value ).
+                                " return data for the sheet requested in standard table format
+                                if ls_sheet_info-sheet_id = iv_sheet_no.
+                                  rt_excel = lt_excel.
+                                endif.
+                              endif.
+*                          endif.
+                            endif.
+                            unassign <ls_sheet>.
+                          endif.
+                        catch cx_openxml_format into data(lox_openxml_format).    " Packaging Error - Invalid Content
+                          message lox_openxml_format->get_text( ) type 'S' display like 'E'.
+                        catch cx_openxml_not_found into data(lox_openxml_not_found). " Part not found
+                          message lox_openxml_not_found->get_text( ) type 'S' display like 'E'.
+                      endtry.
+                      clear ls_sheet_info.
+                    endloop.
+
                   endif.
                 endif.
               catch cx_openxml_format into lox_openxml_format.      " Packaging Error - Invalid Content
+                message lox_openxml_format->get_text( ) type 'S' display like 'E'.
               catch cx_openxml_not_allowed into data(lox_openxml_not_allowed). " Action is not allowed
+                message lox_openxml_not_allowed->get_text( ) type 'S' display like 'E'.
             endtry.
+          else.
+            message 'No data uploaded' type 'S' display like 'E'.
           endif.
         catch cx_openxml_not_found.
       endtry.
@@ -549,8 +679,10 @@ class lcl_helper implementation.
                                          iv_sheet_name = cond #( when ls_sheet-name is not initial
                                                                  then ls_sheet-name
                                                                  else |{ lc_sheet_name }{ sy-tabix }| ) ).
-                  catch cx_openxml_format.    " Packaging Error - Invalid Content
-                  catch cx_openxml_not_found. " Part not found
+                  catch cx_openxml_format into data(lox_openxml_format).    " Packaging Error - Invalid Content
+                    message lox_openxml_format->get_text( ) type 'S' display like 'E'.
+                  catch cx_openxml_not_found into data(lox_openxml_not_found). " Part not found
+                    message lox_openxml_not_found->get_text( ) type 'S' display like 'E'.
                 endtry.
                 if lo_sheet is bound.
 *                lo_sheet->change_sheet_name( exporting iv_new_name = iv_sheet_name ). " not implemented by SAP
@@ -631,8 +763,10 @@ class lcl_helper implementation.
                     endif.
                   endif.
                 endif.
-              catch cx_openxml_format.      " Packaging Error - Invalid Content
-              catch cx_openxml_not_allowed. " Action is not allowed
+              catch cx_openxml_format into lox_openxml_format.      " Packaging Error - Invalid Content
+                message lox_openxml_format->get_text( ) type 'S' display like 'E'.
+              catch cx_openxml_not_allowed into data(lox_openxml_not_allowed). " Action is not allowed
+                message lox_openxml_not_allowed->get_text( ) type 'S' display like 'E'.
             endtry.
             clear:
               ls_sheet,
@@ -648,12 +782,93 @@ class lcl_helper implementation.
           endloop.
           try.
               rv_data = lo_doc->save( ).
-            catch cx_openxml_format.      " Packaging Error - Invalid Content
-            catch cx_openxml_not_found.   " Part not found
-            catch cx_openxml_not_allowed. " Action is not allowed
+            catch cx_openxml_format into lox_openxml_format.      " Packaging Error - Invalid Content
+              message lox_openxml_format->get_text( ) type 'S' display like 'E'.
+            catch cx_openxml_not_found into lox_openxml_not_found.   " Part not found
+              message lox_openxml_not_found->get_text( ) type 'S' display like 'E'.
+            catch cx_openxml_not_allowed into lox_openxml_not_allowed. " Action is not allowed
+              message lox_openxml_not_allowed->get_text( ) type 'S' display like 'E'.
           endtry.
         endif.
       endif.
+    endif.
+  endmethod.
+
+  method sheets_to_itabs.
+    clear rt_excel_itab.
+    if it_sheets is not initial.
+      loop at it_sheets into data(ls_sheet).
+        append initial line to rt_excel_itab assigning field-symbol(<ls_excel_itab>).
+        if <ls_excel_itab> is assigned.
+          <ls_excel_itab> = value #( sheet_name = ls_sheet-sheetname
+                                     rows       = ls_sheet-num_rows
+                                     cols       = ls_sheet-num_cols
+                                     data_tab   = sheet_to_itab( exporting it_sheet = ls_sheet-spreadsheet ) ).
+        endif.
+        clear ls_sheet.
+        unassign <ls_excel_itab>.
+      endloop.
+    endif.
+  endmethod.
+
+  method sheet_to_itab.
+    field-symbols: <lt_data> type standard table.
+
+    unassign <lt_data>.
+    clear rr_data.
+    if it_sheet is not initial.
+      rr_data = generate_table_type(
+                  exporting
+                    it_fields = value #( for ls in it_sheet where ( row = 1 ) ( ls-value ) ) ).
+
+      if rr_data is bound.
+        assign rr_data->* to <lt_data>.
+        if <lt_data> is assigned.
+          loop at it_sheet into data(ls_sheet) where row gt 1.  " exclude header row
+            at new row.
+              append initial line to <lt_data> assigning field-symbol(<ls_data>).
+              if <ls_data> is assigned.
+                clear <ls_data>.
+              endif.
+            endat.
+            assign component ls_sheet-column of structure <ls_data> to field-symbol(<lv>).
+            if sy-subrc = 0 and <lv> is assigned. " Incase there are more xls columns than fields
+              move ls_sheet-value to <lv>.
+            endif.
+            clear ls_sheet.
+            unassign <lv>.
+          endloop.
+        endif.
+      endif.
+    endif.
+  endmethod.
+
+  method generate_table_type.
+    clear rr_data.
+    if it_fields is not initial.
+      try.
+          data(lo_struct_descr) = cl_abap_structdescr=>create(
+                                    exporting
+                                      p_components = value #( for ls in it_fields
+                                                                ( name = ls
+                                                                  type = cast cl_abap_elemdescr(
+                                                                           cl_abap_elemdescr=>describe_by_name( 'EHFND_STRING' ) ) ) ) ).
+
+          if lo_struct_descr is bound.
+            try.
+                data(lo_table_descr) = cl_abap_tabledescr=>create(
+                                         exporting
+                                           p_line_type  = lo_struct_descr ).
+
+                if lo_table_descr is bound.
+                  create data rr_data type handle lo_table_descr.
+                endif.
+              catch cx_sy_table_creation. " Exception when Creating a Table Type
+            endtry.
+          endif.
+        catch cx_sy_struct_creation. " Exception when creating a structure description
+        catch cx_sy_move_cast_error.
+      endtry.
     endif.
   endmethod.
 endclass.
