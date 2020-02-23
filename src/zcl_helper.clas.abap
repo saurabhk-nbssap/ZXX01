@@ -250,7 +250,7 @@ public section.
       value(IV_FM) type EU_LNAME optional
       value(IS_MSG) type SYMSG optional
       value(IV_DISP_LIKE) type SY-MSGTY default 'E' .
-  protected section.
+protected section.
 private section.
 
   constants GC_SANDBOX_SYSID type SYST-SYSID value 'SBX' ##NO_TEXT.
