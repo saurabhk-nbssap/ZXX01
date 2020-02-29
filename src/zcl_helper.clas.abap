@@ -803,6 +803,17 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     lo_struct ?=  lo_table->get_table_line_type( ).
     lt_comp   =   lo_struct->get_components( ).
 
+    loop at lt_comp into ls_comp where as_include = abap_true.
+      try.
+          lo_struct ?= ls_comp-type.
+          append lines of lo_struct->get_components( ) to lt_comp.
+        catch cx_sy_move_cast_error ##no_handler.
+      endtry.
+      clear ls_comp.
+    endloop.
+
+    delete lt_comp where as_include = abap_true.
+
     read table ctab assigning field-symbol(<table_line>) index 1.
     if sy-subrc = 0.
       do.
@@ -1719,6 +1730,17 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     endif.
     if lo_struct is bound.
       data(lt_comp) = lo_struct->get_components( ).
+
+      loop at lt_comp into data(ls_comp) where as_include = abap_true.
+        try.
+            lo_struct ?= ls_comp-type.
+            append lines of lo_struct->get_components( ) to lt_comp.
+          catch cx_sy_move_cast_error ##no_handler.
+        endtry.
+        clear ls_comp.
+      endloop.
+
+      delete lt_comp where as_include = abap_true.
     endif.
 
     data(lv_file) = conv char1024( iv_file ).
@@ -1818,7 +1840,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
           data(lv_col) = condense( to_upper( ls_excel-value ) ).
 
 *        if lv_col is not initial.
-          read table lt_comp into data(ls_comp) with key name = lv_col.
+          clear ls_comp.
+          read table lt_comp into ls_comp with key name = lv_col.
           if sy-subrc = 0.
             clear: ls_map.
             ls_map-excel_index = ls_excel-col.
@@ -1904,10 +1927,12 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         et_excel = lo_helper->sheets_to_itabs( exporting it_sheets = lt_sheets ).
       endif.
 
-      check ct_itab is not initial and iv_check_file_format eq abap_true.
-      check_file_format( changing ctab = ct_itab exceptions file_format_altered = 1 others = 2 ).
-      if sy-subrc <> 0.
-        clear ct_itab.
+      " check file format for move corresponding is tackled in its own block above
+      if ct_itab is not initial and iv_check_file_format eq abap_true and iv_move_corresponding = abap_false.
+        check_file_format( changing ctab = ct_itab exceptions file_format_altered = 1 others = 2 ).
+        if sy-subrc <> 0.
+          clear ct_itab.
+        endif.
       endif.
     endif.
 
