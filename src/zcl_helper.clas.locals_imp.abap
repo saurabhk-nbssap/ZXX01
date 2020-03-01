@@ -20,6 +20,8 @@ class lcl_helper definition final.
              value type string,
            end of ty_excel.
 
+    types: ltty_fields_fcat type standard table of rfc_fields with default key.
+
     data: gt_alsmex_tabline type standard table of ty_alsmex_tabline,
           gt_excel          type standard table of ty_excel with default key.
 
@@ -87,6 +89,12 @@ class lcl_helper definition final.
         returning
           value(rv_data)             type xstring,
 
+      build_fields_fcat
+        importing
+          value(io_struct_descr) type ref to cl_abap_structdescr
+        returning
+          value(rt_fields_fcat)  type ltty_fields_fcat,
+
       excel_to_itab_ole
         importing
           value(filename)    type  rlgrap-filename
@@ -123,7 +131,15 @@ class lcl_helper definition final.
         changing
           value(i_string)       type ty_s_senderline
           value(i_sic_int)      type i
-          value(i_intern_value) type ty_d_itabvalue.
+          value(i_intern_value) type ty_d_itabvalue,
+
+      get_temp_file_path
+        returning
+          value(rv_temp_file) type string,
+
+      delete_temp_file
+        importing
+          value(iv_temp_file) type string.
 
 *  protected section.
     " placeholder
@@ -390,36 +406,12 @@ class lcl_helper implementation.
                 i_output_immediately = abap_true ).                           " X = Display Progress Immediately
 
             try.
-                data(lv_temp_dir) = value string( ).
-                cl_gui_frontend_services=>get_temp_directory(
-                  changing
-                    temp_dir             = lv_temp_dir " Temporary Directory
-                  exceptions
-                    cntl_error           = 1        " Control error
-                    error_no_gui         = 2        " No GUI available
-                    not_supported_by_gui = 3        " GUI does not support this
-                    others               = 4 ).
-                if sy-subrc <> 0.
-                  message id sy-msgid type sy-msgty number sy-msgno
-                    with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-                else.
-                  cl_gui_cfw=>flush(
-                    exceptions
-                      cntl_system_error = 1 " cntl_system_error
-                      cntl_error        = 2 " cntl_error
-                      others            = 3 ).
-                  if sy-subrc <> 0.
-                    message id sy-msgid type sy-msgty number sy-msgno
-                      with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-                  else.
-                    data(lv_temp_file) = |{ lv_temp_dir }\\sap_data_{ sy-datum }_{ sy-uzeit }.xls|.
-                  endif.
-                endif.
+                data(lv_temp_file) = get_temp_file_path( ).
 
                 zcl_helper=>read_file_from_app_server(
                   exporting
-                    iv_app_server_filepath = conv #( iv_filename ) " File path on app server(AL11)
-                    iv_frontend_filepath = conv #( lv_temp_file ) ).
+                    iv_app_server_filepath  = conv #( iv_filename ) " File path on app server(AL11)
+                    iv_frontend_filepath    = conv #( lv_temp_file ) ).
 
                 if zcl_helper=>check_file_exists( exporting iv_filepath = lv_temp_file ).
                   lo_imp_excel->set_file( exporting iv_file = conv #( lv_temp_file ) ).
@@ -463,38 +455,7 @@ class lcl_helper implementation.
           message lox_mass_spreadsheet->get_longtext( ) type 'E' display like 'I'.
       endtry.
 
-      if lv_temp_file is not initial and zcl_helper=>check_file_exists( exporting iv_filepath = lv_temp_file ).
-        data(lv_rc) = value i( ).
-        cl_gui_frontend_services=>file_delete(
-          exporting
-            filename             = lv_temp_file " Name of the file to be deleted
-          changing
-            rc                   = lv_rc
-          exceptions
-            file_delete_failed   = 1        " Could not delete file
-            cntl_error           = 2        " Control error
-            error_no_gui         = 3        " Error: No GUI
-            file_not_found       = 4        " File not found
-            access_denied        = 5        " Access denied
-            unknown_error        = 6        " Unknown error
-            not_supported_by_gui = 7        " GUI does not support this
-            wrong_parameter      = 8        " Wrong parameter
-            others               = 9 ).
-        if sy-subrc <> 0.
-          message id sy-msgid type sy-msgty number sy-msgno
-            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-        else.
-          cl_gui_cfw=>flush(
-            exceptions
-              cntl_system_error = 1 " cntl_system_error
-              cntl_error        = 2 " cntl_error
-              others            = 3 ).
-          if sy-subrc <> 0.
-            message id sy-msgid type sy-msgty number sy-msgno
-              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-          endif.
-        endif.
-      endif.
+      delete_temp_file( exporting iv_temp_file = lv_temp_file ).
     endif.
   endmethod.
 
@@ -879,9 +840,12 @@ class lcl_helper implementation.
   endmethod.
 
   method itab_to_excel_soi.
-    constants: lc_app_name   type c length 50 value 'EXCEL_CONTAINER',
-               lc_doc_title  type c length 50 value 'SAP_EXCEL',
-               lc_sheet_name type string value 'SAP_DATA'.
+    constants: lc_app_name      type c length 50 value 'EXCEL_CONTAINER',
+               lc_doc_title     type c length 50 value 'SAP_EXCEL',
+               lc_range_header  type c length 50 value 'RANGE_HEADER',
+               lc_range_data    type c length 50 value 'RANGE_DATA',
+               lc_string_format type c length 1 value '@',
+               lc_sheet_name    type string value 'SAP_DATA'.
 
     field-symbols: <lt_data> type standard table.
 
@@ -889,242 +853,245 @@ class lcl_helper implementation.
     if it_multi_sheet_data is not initial.
       c_oi_container_control_creator=>get_container_control(
         importing
-          control = data(lo_container_control) " Container Control
-          error   = data(lo_error)      " Error Object
-          retcode = data(lv_retcode) ). " Error Code (Obsolete)
+          control = data(lo_container_control)  " Container Control
+          error   = data(lo_error)              " Error Object
+          retcode = data(lv_retcode) ).         " Error Code (Obsolete)
 
       lo_container_control->init_control(
         exporting
           inplace_enabled          = abap_true
-          r3_application_name      = lc_app_name  " Application Name
-          parent                   = cl_gui_custom_container=>default_screen               " Parent Container
+          r3_application_name      = lc_app_name                                  " Application Name
+          parent                   = cl_gui_custom_container=>default_screen      " Parent Container
         importing
-          error                    = lo_error                " Error Object
-          retcode                  = lv_retcode              " Error Value: Obsolete
+          error                    = lo_error                                     " Error Object
+          retcode                  = lv_retcode                                   " Error Value: Obsolete
         exceptions
-          javabeannotsupported     = 1                    " JavaBeans are not supported
+          javabeannotsupported     = 1                                            " JavaBeans are not supported
           others                   = 2 ).
 
       if sy-subrc <> 0.
         message id sy-msgid type sy-msgty number sy-msgno
-          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into data(lv_dummy).
       endif.
 
-      lo_container_control->get_document_proxy(
-        exporting
-          document_type      = soi_doctype_excel_sheet
-        importing
-          document_proxy     = data(lo_document_proxy)
-          error              = lo_error
-          retcode            = lv_retcode ).
-
-      lo_document_proxy->create_document(
-        exporting
-          document_title   = lc_doc_title
-          open_inplace     = abap_true
-        importing
-          error            = lo_error
-          retcode          = lv_retcode ).
-
-      lo_document_proxy->has_spreadsheet_interface(
-        importing
-          error        = lo_error        " Error?
-          is_available = data(lv_is_available) " Is Interface Available
-          retcode      = lv_retcode ).     " Text of Error
-
-      if lv_is_available = 1.
-        lo_document_proxy->get_spreadsheet_interface(
+      if lv_retcode = c_oi_errors=>ret_ok.
+        lo_container_control->get_document_proxy(
+          exporting
+            document_type      = soi_doctype_excel_sheet
           importing
-            error           = lo_error           " Error?
-            sheet_interface = data(lo_sheet_interface) " Reference to Spreadsheet Interface
-            retcode         = lv_retcode ).        " Text of Error
-      endif.
+            document_proxy     = data(lo_document_proxy)
+            error              = lo_error
+            retcode            = lv_retcode ).
 
-      loop at it_multi_sheet_data into data(ls_sheet).
-
-        unassign <lt_data>.
-        assign ls_sheet-data->* to <lt_data>.
-        if <lt_data> is assigned.
-          lo_sheet_interface->add_sheet(
+        if lo_document_proxy is bound.
+          lo_document_proxy->create_document(
             exporting
-              name     = condense( cond char100( when ls_sheet-name is not initial
-                                                 then ls_sheet-name
-                                                 else |{ lc_sheet_name }{ sy-tabix }| ) )    " Name of Worksheet
+              document_title   = lc_doc_title
+              open_inplace     = abap_true
             importing
-              error    = lo_error   " Error?
-              retcode  = lv_retcode ). " Text of Error
+              error            = lo_error
+              retcode          = lv_retcode ).
 
-          data(lv_rows) = lines( <lt_data> ).
-
-          data(lo_struct_descr) = cast cl_abap_structdescr(
-                                  cast cl_abap_tabledescr(
-                                    cl_abap_typedescr=>describe_by_data(
-                                      exporting
-                                        p_data = <lt_data> ) )->get_table_line_type( ) ).
-
-          data(lt_components) = lo_struct_descr->get_components( ).
-
-          loop at lt_components into data(ls_component).
-            if ls_component-as_include = abap_true.
-              append lines of cast cl_abap_structdescr( ls_component-type )->get_components( ) to lt_components.
-            endif.
-            clear ls_component.
-          endloop.
-
-          delete lt_components where as_include = abap_true.
-
-          data(lv_columns) = lines( lt_components ).
-
-          " add header row
-          lo_sheet_interface->insert_range_dim(
-            exporting
-              name      = 'RANGE_HEADER'    " Name of Range
-              left      = 1    " Top Left-Hand Corner
-              top       = 1     " Top Left-Hand Corner
-              rows      = 1    " Rows
-              columns   = lv_columns " Columns
-            importing
-              error     = lo_error   " Errors?
-              retcode   = lv_retcode ). " text
-
-          lo_sheet_interface->set_format_string(
-            exporting
-              rangename    = 'RANGE_HEADER'    " Name of Range
-              formatstring = '@' " Format String
-            importing
-              error        = lo_error        " Error?
-              retcode      = lv_retcode ).      " Text of Error
-
-          data: lt_content type soi_generic_table.
-          clear lt_content.
-          loop at lt_components into ls_component.
-            data(lv_tabix) = sy-tabix.
-            append initial line to lt_content assigning field-symbol(<ls_content>).
-            <ls_content>-row = '1'.
-            <ls_content>-column = lv_tabix.
-            <ls_content>-value = ls_component-name.
-            clear ls_component.
-            unassign <ls_content>.
-          endloop.
-
-          data: lt_ranges type soi_range_list.
-          clear lt_ranges.
-          append initial line to lt_ranges assigning field-symbol(<ls_range>).
-          if <ls_range> is assigned.
-            <ls_range>-name = 'RANGE_HEADER'.
-            <ls_range>-columns = lv_columns.
-            <ls_range>-rows = 1.
+          if lv_retcode = c_oi_errors=>ret_ok.
+            lo_document_proxy->has_spreadsheet_interface(
+              importing
+                error        = lo_error                 " Error?
+                is_available = data(lv_is_available)    " Is Interface Available
+                retcode      = lv_retcode ).            " Text of Error
           endif.
 
-          lo_sheet_interface->set_ranges_data(
-            exporting
-              ranges    = lt_ranges    " Ranges in the Sheet
-              contents  = lt_content  " Contents of the Ranges
-            importing
-              error     = lo_error     " Errors?
-              retcode   = lv_retcode ).  " Text of the Error
-
-          lo_sheet_interface->set_color(
-            exporting
-              rangename = 'RANGE_HEADER' " Name of Range
-              front     = 2     " Foreground color
-              back      = 16      " Background color
-            importing
-              error     = lo_error     " Error?
-              retcode   = lv_retcode ).  " Text of Error
-
-          lo_sheet_interface->insert_range_dim(
-            exporting
-              name      = 'RANGE_DATA'    " Name of Range
-              left      = 1    " Top Left-Hand Corner
-              top       = 2     " Top Left-Hand Corner
-              rows      = lv_rows    " Rows
-              columns   = lv_columns " Columns
-            importing
-              error     = lo_error   " Errors?
-              retcode   = lv_retcode ). " text
-
-          lo_sheet_interface->set_format_string(
-            exporting
-              rangename    = 'RANGE_DATA'    " Name of Range
-              formatstring = '@' " Format String
-            importing
-              error        = lo_error        " Error?
-              retcode      = lv_retcode ).      " Text of Error
-
-          data: lt_fields type soi_fields_table.
-          call function 'DP_GET_FIELDS_FROM_TABLE'
-            tables
-              data             = <lt_data>
-              fields           = lt_fields
-            exceptions
-              dp_invalid_table = 1
-              others           = 2.
-          if sy-subrc <> 0.
-            message id sy-msgid type sy-msgty number sy-msgno
-              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          if lv_is_available = 1.
+            lo_document_proxy->get_spreadsheet_interface(
+              importing
+                error           = lo_error                  " Error?
+                sheet_interface = data(lo_sheet_interface)  " Reference to Spreadsheet Interface
+                retcode         = lv_retcode ).             " Text of Error
           endif.
-          clear lt_fields.
-          perform build_field_table in program sapltrux if found tables lt_fields using lo_struct_descr.
 
-          lo_sheet_interface->insert_one_table(
-            exporting
-              data_table   = <lt_data>   " Data
-              fields_table = lt_fields " The Fields of the Table
-              rangename    = 'RANGE_DATA'    " The Name of the Range
-              wholetable   = abap_true           " Inserts Whole Table
+          if lo_sheet_interface is bound.
+            loop at it_multi_sheet_data into data(ls_sheet).
+
+              unassign <lt_data>.
+              assign ls_sheet-data->* to <lt_data>.
+              if <lt_data> is assigned.
+                lo_sheet_interface->add_sheet(
+                  exporting
+                    name     = condense( cond char100( when ls_sheet-name is not initial
+                                                       then ls_sheet-name
+                                                       else |{ lc_sheet_name }{ sy-tabix }| ) )    " Name of Worksheet
+                  importing
+                    error    = lo_error       " Error?
+                    retcode  = lv_retcode ).  " Text of Error
+
+                data(lt_fields) = ls_sheet-fields.
+                if lt_fields is not initial or ls_sheet-header = abap_true.
+                  data(lo_struct_descr) = cast cl_abap_structdescr(
+                                            cast cl_abap_tabledescr(
+                                              cl_abap_typedescr=>describe_by_data(
+                                                exporting
+                                                  p_data = <lt_data> ) )->get_table_line_type( ) ).
+
+                  data(lt_components) = cond #( when lo_struct_descr is bound
+                                                then lo_struct_descr->get_components( ) ).
+
+                  loop at lt_components into data(ls_component) where as_include = abap_true.
+                    append lines of cast cl_abap_structdescr( ls_component-type )->get_components( ) to lt_components.
+                    clear ls_component.
+                  endloop.
+
+                  delete lt_components where as_include = abap_true.
+
+                  if lt_fields is not initial.
+                    loop at lt_fields assigning field-symbol(<ls_field>) where name is initial.
+                      try.
+                          <ls_field>-name = lt_components[ sy-tabix ]-name.
+                        catch cx_sy_itab_line_not_found ##no_handler.
+                      endtry.
+                    endloop.
+                  else.
+                    lt_fields = corresponding #( lt_components ).
+                  endif.
+                endif.
+
+                data(lv_rows) = lines( <lt_data> ).
+
+                data(lv_columns) = lines( lt_components ).
+
+                " add header row
+                lo_sheet_interface->insert_range_dim(
+                  exporting
+                    name      = lc_range_header     " Name of Range
+                    left      = 1                   " Top Left-Hand Corner    ; top-left cell and fill entire first row = header
+                    top       = 1                   " Top Left-Hand Corner
+                    rows      = 1                   " Rows
+                    columns   = lv_columns          " Columns
+                  importing
+                    error     = lo_error            " Errors?
+                    retcode   = lv_retcode ).       " text
+
+                lo_sheet_interface->set_format_string(
+                  exporting
+                    rangename    = lc_range_header    " Name of Range
+                    formatstring = lc_string_format   " Format String
+                  importing
+                    error        = lo_error           " Error?
+                    retcode      = lv_retcode ).      " Text of Error
+
+                data(lt_content) = value soi_generic_table( for ls_field in lt_fields index into lv_index
+                                                            ( row     = 1
+                                                              column  = lv_index
+                                                              value   = ls_field-name ) ).
+
+
+                data(lt_ranges) = value soi_range_list( ( name    = lc_range_header
+                                                          rows    = 1
+                                                          columns = lv_columns ) ).
+
+                lo_sheet_interface->set_ranges_data(
+                  exporting
+                    ranges    = lt_ranges       " Ranges in the Sheet
+                    contents  = lt_content      " Contents of the Ranges
+                  importing
+                    error     = lo_error        " Errors?
+                    retcode   = lv_retcode ).   " Text of the Error
+
+                lo_sheet_interface->set_color(
+                  exporting
+                    rangename = lc_range_header " Name of Range
+                    front     = 2               " Foreground color
+                    back      = 16              " Background color
+                  importing
+                    error     = lo_error        " Error?
+                    retcode   = lv_retcode ).   " Text of Error
+
+                lo_sheet_interface->insert_range_dim(
+                  exporting
+                    name      = lc_range_data     " Name of Range
+                    left      = 1                 " Top Left-Hand Corner
+                    top       = 2                 " Top Left-Hand Corner
+                    rows      = lv_rows           " Rows
+                    columns   = lv_columns        " Columns
+                  importing
+                    error     = lo_error          " Errors?
+                    retcode   = lv_retcode ).     " text
+
+                lo_sheet_interface->set_format_string(
+                  exporting
+                    rangename    = lc_range_data      " Name of Range
+                    formatstring = lc_string_format   " Format String
+                  importing
+                    error        = lo_error           " Error?
+                    retcode      = lv_retcode ).      " Text of Error
+
+                data(lt_fields_fcat) = cond #( when lo_struct_descr is bound
+                                               then build_fields_fcat(
+                                                      exporting
+                                                        io_struct_descr = lo_struct_descr ) ).
+
+                lo_sheet_interface->insert_one_table(
+                  exporting
+                    data_table   = <lt_data>        " Data
+                    fields_table = lt_fields_fcat   " The Fields of the Table
+                    rangename    = lc_range_data    " The Name of the Range
+                    wholetable   = abap_true        " Inserts Whole Table
+                  importing
+                    error        = lo_error         " Errors?
+                    retcode      = lv_retcode ).    " Text of the Error
+
+                lo_sheet_interface->fit_widest(
+                  exporting
+                    name     = space
+                  importing
+                    error    = lo_error       " Error?
+                    retcode  = lv_retcode ).  " text
+              endif.
+
+              clear:
+                ls_sheet,
+                lo_error,
+                lv_retcode,
+                lt_fields,
+                lo_struct_descr,
+                lt_components,
+                lv_rows,
+                lv_columns,
+                lt_content,
+                lt_ranges,
+                lt_fields_fcat.
+
+              unassign <ls_field>.
+            endloop.
+
+            " delete default sheet?
+*            lo_sheet_interface->delete_sheet(
+*              exporting
+*                name     = 'Sheet1'       " Name of Worksheet
+*              importing
+*                error    = lo_error       " Error?
+*                retcode  = lv_retcode ).  " Text of Error
+
+            " temp save without user interaction
+            data(lv_temp_file) = get_temp_file_path( ).
+
+            lo_document_proxy->save_as(
+              exporting
+                file_name   = |{ lv_temp_file }|
+              importing
+                error       = lo_error
+                retcode     = lv_retcode ).
+          endif.
+
+          lo_document_proxy->close_document(
             importing
-              error        = lo_error        " Errors?
-              retcode      = lv_retcode ).      " Text of the Error
+              error       = lo_error
+              retcode     = lv_retcode ).
 
-          lo_sheet_interface->fit_widest(
-            exporting
-              name     = space
+          lo_document_proxy->release_document(
             importing
-              error    = lo_error   " Error?
-              retcode  = lv_retcode ). " text
-
+              error    = lo_error
+              retcode  = lv_retcode ).
         endif.
-
-        clear ls_sheet.
-      endloop.
-
-      lo_sheet_interface->delete_sheet(
-        exporting
-          name     = 'Sheet1'    " Name of Worksheet
-        importing
-          error    = lo_error   " Error?
-          retcode  = lv_retcode ). " Text of Error
-
-      data lv_doc_size type i.
-*lo_document_proxy->save_document_to_url(
-*  exporting
-*    url           = 'FILE://C:\temp\TESTEXPORT.xls'
-*  importing
-*    error         = lo_error
-*    retcode       = lv_retcode
-*  changing
-*    document_size = lv_doc_size ).
-*
-*message |{ lv_doc_size } bytes passed| type 'S'.
-
-      lo_document_proxy->save_as(
-        exporting
-          file_name   = 'C:\temp\TESTEXPORT.xls'
-*    prompt_user = 'X'
-        importing
-          error       = lo_error
-          retcode     = lv_retcode ).
-
-      lo_document_proxy->close_document(
-        importing
-          error       = lo_error
-          retcode     = lv_retcode ).
-
-      lo_document_proxy->release_document(
-        importing
-          error    = lo_error
-          retcode  = lv_retcode ).
+      endif.
 
       lo_container_control->release_all_documents(
         importing
@@ -1135,6 +1102,105 @@ class lcl_helper implementation.
         importing
           error    = lo_error
           retcode  = lv_retcode ).
+
+      delete_temp_file( exporting iv_temp_file = lv_temp_file ).
+    endif.
+  endmethod.
+
+  method build_fields_fcat.
+    clear rt_fields_fcat.
+
+    split io_struct_descr->absolute_name at '=' into data(lv_type) data(lv_tab_name).
+    if lv_tab_name is initial.
+      lv_tab_name = 'UNKNOWN'.
+    endif.
+
+    data(lv_offset) = value i( ).
+
+    loop at io_struct_descr->components into data(ls_component).
+      append initial line to rt_fields_fcat assigning field-symbol(<ls_field_fcat>).
+      if <ls_field_fcat> is assigned.
+        <ls_field_fcat> = corresponding #( ls_component ).
+
+        <ls_field_fcat> = value #( tabname   = lv_tab_name
+                                   fieldname = ls_component-name
+                                   exid      = ls_component-type_kind
+                                   intlength = ls_component-length / cl_abap_char_utilities=>charsize
+                                   position  = sy-tabix
+                                   offset    = lv_offset ).
+
+        lv_offset = lv_offset + <ls_field_fcat>-intlength.
+      endif.
+
+      clear ls_component.
+      unassign <ls_field_fcat>.
+    endloop.
+  endmethod.
+
+  method get_temp_file_path.
+    clear rv_temp_file.
+    data(lv_temp_dir) = value string( ).
+    cl_gui_frontend_services=>get_temp_directory(
+      changing
+        temp_dir             = lv_temp_dir " Temporary Directory
+      exceptions
+        cntl_error           = 1        " Control error
+        error_no_gui         = 2        " No GUI available
+        not_supported_by_gui = 3        " GUI does not support this
+        others               = 4 ).
+    if sy-subrc <> 0.
+      message id sy-msgid type sy-msgty number sy-msgno
+        with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    else.
+      cl_gui_cfw=>flush(
+        exceptions
+          cntl_system_error = 1 " cntl_system_error
+          cntl_error        = 2 " cntl_error
+          others            = 3 ).
+      if sy-subrc <> 0.
+        message id sy-msgid type sy-msgty number sy-msgno
+          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      else.
+        data(lv_temp_file) = |{ lv_temp_dir }\\sap_data_{ sy-datum }_{ sy-uzeit }.xls|.
+      endif.
+    endif.
+
+    rv_temp_file = lv_temp_file.
+  endmethod.
+
+  method delete_temp_file.
+    data(lv_temp_file) = iv_temp_file.
+    if lv_temp_file is not initial and zcl_helper=>check_file_exists( exporting iv_filepath = lv_temp_file ).
+      data(lv_rc) = value i( ).
+      cl_gui_frontend_services=>file_delete(
+        exporting
+          filename             = lv_temp_file " Name of the file to be deleted
+        changing
+          rc                   = lv_rc
+        exceptions
+          file_delete_failed   = 1        " Could not delete file
+          cntl_error           = 2        " Control error
+          error_no_gui         = 3        " Error: No GUI
+          file_not_found       = 4        " File not found
+          access_denied        = 5        " Access denied
+          unknown_error        = 6        " Unknown error
+          not_supported_by_gui = 7        " GUI does not support this
+          wrong_parameter      = 8        " Wrong parameter
+          others               = 9 ).
+      if sy-subrc <> 0.
+        message id sy-msgid type sy-msgty number sy-msgno
+          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+      else.
+        cl_gui_cfw=>flush(
+          exceptions
+            cntl_system_error = 1 " cntl_system_error
+            cntl_error        = 2 " cntl_error
+            others            = 3 ).
+        if sy-subrc <> 0.
+          message id sy-msgid type sy-msgty number sy-msgno
+            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        endif.
+      endif.
     endif.
   endmethod.
 endclass.
