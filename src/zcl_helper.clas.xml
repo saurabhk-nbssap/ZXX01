@@ -173,6 +173,12 @@
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>ITAB_TO_FCAT</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Quick &amp; dirty conversion of abap itab/struct to field-cat</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
      <CMPNAME>PRINT_NO_PG_BRK</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Print ALV data in spool output without page breaks</DESCRIPT>

@@ -1038,15 +1038,52 @@ class lcl_helper implementation.
                         retcode      = lv_retcode ).      " Text of Error
                   endif.
 
-                  lo_sheet_interface->insert_one_table(
+                  clear:
+                   lt_content,
+                   lt_ranges.
+
+                  loop at <lt_data> assigning field-symbol(<ls_data>).
+                    data(lv_row) = sy-tabix.
+                    do lines( lt_components ) times.
+                      data(lv_column) = sy-index.
+                      append initial line to lt_content assigning field-symbol(<ls_content>).
+                      if <ls_content> is assigned.
+                        <ls_content>-row = lv_row.
+                        <ls_content>-column = lv_column.
+                        assign component sy-index of structure <ls_data> to field-symbol(<lv>).
+                        if <lv> is assigned.
+                          <ls_content>-value = condense( conv char256( <lv> ) ).
+                        endif.
+                      endif.
+                      unassign:
+                        <ls_content>,
+                        <lv>.
+                      clear lv_column.
+                    enddo.
+                    clear lv_row.
+                  endloop.
+
+                  lt_ranges = value soi_range_list( ( name    = lc_range_data
+                                                      rows    = lv_rows
+                                                      columns = lv_columns ) ).
+
+                  lo_sheet_interface->set_ranges_data(
                     exporting
-                      data_table   = <lt_data>        " Data
-                      fields_table = lt_fields_fcat   " The Fields of the Table
-                      rangename    = lc_range_data    " The Name of the Range
-                      wholetable   = abap_true        " Inserts Whole Table
+                      ranges    = lt_ranges       " Ranges in the Sheet
+                      contents  = lt_content      " Contents of the Ranges
                     importing
-                      error        = lo_error         " Errors?
-                      retcode      = lv_retcode ).    " Text of the Error
+                      error     = lo_error        " Errors?
+                      retcode   = lv_retcode ).   " Text of the Error
+
+*                  lo_sheet_interface->insert_one_table(
+*                    exporting
+*                      data_table   = <lt_data>        " Data
+*                      fields_table = lt_fields_fcat   " The Fields of the Table
+*                      rangename    = lc_range_data    " The Name of the Range
+*                      wholetable   = abap_true        " Inserts Whole Table
+*                    importing
+*                      error        = lo_error         " Errors?
+*                      retcode      = lv_retcode ).    " Text of the Error
 
                   lo_sheet_interface->fit_widest(
                     exporting

@@ -250,6 +250,12 @@ public section.
       value(IV_FM) type EU_LNAME optional
       value(IS_MSG) type SYMSG optional
       value(IV_DISP_LIKE) type SY-MSGTY default 'E' .
+  class-methods ITAB_TO_FCAT
+    importing
+      value(IV_DATA) type ANY
+    exporting
+      value(ET_LVC_FCAT) type LVC_T_FCAT
+      value(ET_SLIS_FCAT) type SLIS_T_FIELDCAT_ALV .
 protected section.
 private section.
 
@@ -2695,6 +2701,47 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         endtry.
       endif.
     endif.
+  endmethod.
+
+
+  method itab_to_fcat.
+*    if iv_data is supplied.
+    data(lo_type_descr) = cl_abap_typedescr=>describe_by_data( exporting p_data = iv_data ).
+    if lo_type_descr is bound.
+      case type of lo_type_descr.
+        when type cl_abap_tabledescr.
+          data(lo_struct_descr) = cast cl_abap_structdescr( cast cl_abap_tabledescr( lo_type_descr )->get_table_line_type( ) ).
+        when type cl_abap_structdescr.
+          lo_struct_descr ?= lo_type_descr.
+        when others.
+      endcase.
+
+      if lo_struct_descr is bound.
+        data(lt_ddic_field_list) = lo_struct_descr->get_ddic_field_list(
+                                     exporting
+                                       p_langu                  = sy-langu
+                                       p_including_substructres = abap_true ).
+
+        if lt_ddic_field_list is not initial.
+          et_lvc_fcat = corresponding #( lt_ddic_field_list ).
+
+          call function 'LVC_TRANSFER_TO_SLIS'
+            exporting
+              it_fieldcat_lvc         = et_lvc_fcat " Field Catalog
+            importing
+              et_fieldcat_alv         = et_slis_fcat " Field Catalog
+            exceptions
+              it_data_missing         = 1
+              it_fieldcat_lvc_missing = 2
+              others                  = 3.
+          if sy-subrc <> 0.
+            message id sy-msgid type sy-msgty number sy-msgno
+              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          endif.
+        endif.
+      endif.
+    endif.
+*    endif.
   endmethod.
 
 
