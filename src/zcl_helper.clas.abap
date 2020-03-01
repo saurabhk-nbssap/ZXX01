@@ -2794,7 +2794,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
     endif.
 
-    if lv_frontend_filepath is not initial and iv_download_prompt = abap_true.
+    if lv_frontend_filepath is not initial and lv_download_prompt = abap_true.
       lv_msg = 'Invalid param comb: Frontend path, download prompt'.
       raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
     endif.
@@ -2874,7 +2874,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
                   if rt_data is not initial.
                     if lv_frontend_filepath is not initial or lv_download_prompt = abap_true.
-                      if iv_download_prompt = abap_true.
+                      if lv_download_prompt = abap_true.
                         lv_frontend_filepath = file_save_dialog( ).
                       endif.
                       if lv_frontend_filepath is not initial.

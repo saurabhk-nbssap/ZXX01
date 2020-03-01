@@ -39,14 +39,20 @@ class ltcl_file_io definition for testing
     methods: teardown.
 
     methods:
-      itab_to_excel_xls_frontend    for testing,
-      excel_to_itab_xls_frontend    for testing,
-      itab_to_excel_xls_app_server  for testing,
-      excel_to_itab_xls_app_server  for testing,
-      itab_to_excel_xlsx_frontend   for testing,
-      excel_to_itab_xlsx_frontend   for testing,
-      itab_to_excel_xlsx_app_server for testing,
-      excel_to_itab_xlsx_app_server for testing.
+      itab_to_excel_xls_frontend     for testing,
+      write_file_to_app_server_xls   for testing,
+      excel_to_itab_xls_app_server   for testing,
+      read_file_from_app_server_xls  for testing,
+      excel_to_itab_xls_frontend     for testing,
+      itab_to_excel_xls_app_server   for testing,
+      del_file_from_app_server_xls   for testing,
+      itab_to_excel_xlsx_frontend    for testing,
+      write_file_to_app_server_xlsx  for testing,
+      excel_to_itab_xlsx_app_server  for testing,
+      read_file_from_app_server_xlsx for testing,
+      excel_to_itab_xlsx_frontend    for testing,
+      itab_to_excel_xlsx_app_server  for testing,
+      del_file_from_app_server_xlsx  for testing.
 endclass.       "ltcl_File_Io
 
 
@@ -84,16 +90,34 @@ class ltcl_file_io implementation.
   method itab_to_excel_xls_frontend.
   endmethod.
 
+  method write_file_to_app_server_xls.
+  endmethod.
+
+  method excel_to_itab_xls_app_server.
+  endmethod.
+
+  method read_file_from_app_server_xls.
+  endmethod.
+
   method excel_to_itab_xls_frontend.
   endmethod.
 
   method itab_to_excel_xls_app_server.
   endmethod.
 
-  method excel_to_itab_xls_app_server.
+  method del_file_from_app_server_xls.
   endmethod.
 
   method itab_to_excel_xlsx_frontend.
+  endmethod.
+
+  method write_file_to_app_server_xlsx.
+  endmethod.
+
+  method excel_to_itab_xlsx_app_server.
+  endmethod.
+
+  method read_file_from_app_server_xlsx.
   endmethod.
 
   method excel_to_itab_xlsx_frontend.
@@ -102,6 +126,6 @@ class ltcl_file_io implementation.
   method itab_to_excel_xlsx_app_server.
   endmethod.
 
-  method excel_to_itab_xlsx_app_server.
+  method del_file_from_app_server_xlsx.
   endmethod.
 endclass.
