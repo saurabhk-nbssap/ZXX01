@@ -2490,11 +2490,28 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
 
   method itab_to_excel.
+    constants: lc_def_ext type string value 'XLSX',
+               lc_xls_ext type string value 'XLS'.
+
     clear:
       rt_data,
       ev_file_length.
 
     data(lo_helper) = new lcl_helper( ).
+
+    " compute file extension
+    data(lv_file_ext) = value char50( ).
+    data(lv_file) = cond char1024( when iv_file_name is not initial then iv_file_name
+                                   when iv_app_server_filepath is not initial then iv_app_server_filepath ).
+    call function 'TRINT_FILE_GET_EXTENSION'
+      exporting
+        filename  = lv_file
+      importing
+        extension = lv_file_ext.
+
+    if lv_file_ext is initial.
+      lv_file_ext = lc_def_ext.
+    endif.
 
     if it_multi_sheet_data is not initial.
       loop at it_multi_sheet_data into data(ls_sheet) where data is bound.
@@ -2526,9 +2543,17 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         cl_rs_data=>switch_order( changing c_t_data = lt_multi_sheet_data ). " Table to Be Sorted
       endif.
 
-      data(lv_data) = lo_helper->itab_to_excel_ehfnd(
+      case lv_file_ext.
+        when lc_def_ext.
+          data(lv_data) = lo_helper->itab_to_excel_ehfnd(
                         exporting
                           it_multi_sheet_data = lt_multi_sheet_data ).
+        when lc_xls_ext.
+          lv_data = lo_helper->itab_to_excel_soi(
+                      exporting
+                        it_multi_sheet_data = lt_multi_sheet_data ).
+        when others.
+      endcase.
     endif.
 
     if lv_data is not initial.
@@ -2585,9 +2610,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
           lv_filename.
 
         lv_window_title = 'Specify folder and file name to save excel file'.
-        lv_default_extension = 'xlsx'.
-        lv_file_filter = 'Excel files(*.xlsx)|*.xlsx'. " description|*.extension
-        lv_default_file_name = iv_file_name.
+        lv_default_extension = lv_file_ext.
+        lv_file_filter = |Excel files(*.{ lv_file_ext })\|*.{ lv_file_ext }|. " description|*.extension
+        lv_default_file_name = replace( val = to_upper( iv_file_name ) sub = |.{ lv_file_ext }| with = '' occ = 0 ).
 
         cl_gui_frontend_services=>file_save_dialog(
           exporting

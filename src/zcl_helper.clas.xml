@@ -97,7 +97,7 @@
      <CLSNAME>ZCL_HELPER</CLSNAME>
      <CMPNAME>EXCEL_TO_ITAB</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Upload Excel(XLS/XLSX) file to SAP internal table</DESCRIPT>
+     <DESCRIPT>Upload multisheet Excel(XLS/XLSX) file to SAP int. table/s</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
@@ -169,7 +169,7 @@
      <CLSNAME>ZCL_HELPER</CLSNAME>
      <CMPNAME>ITAB_TO_EXCEL</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Download SAP internal table to excel(XLSX)</DESCRIPT>
+     <DESCRIPT>Download SAP int. table/s to multisheet excel(XLS/XLSX)</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
