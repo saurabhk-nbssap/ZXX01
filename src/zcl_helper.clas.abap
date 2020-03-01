@@ -3219,32 +3219,32 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
         cl_gui_frontend_services=>gui_upload(
           exporting
-            filename              = lv_frontend_filepath    " Name of file
-            filetype              = lc_binary               " File Type (ASCII, Binary)
-        importing
-          filelength              = lv_file_length          " File Length
+            filename                = lv_frontend_filepath    " Name of file
+            filetype                = lc_binary               " File Type (ASCII, Binary)
+          importing
+            filelength              = lv_file_length          " File Length
           changing
-            data_tab              = ct_data                 " Transfer table for file contents
-        exceptions
-          file_open_error         = 1                  " File does not exist and cannot be opened
-          file_read_error         = 2                  " Error when reading file
-          no_batch                = 3                  " Cannot execute front-end function in background
-          gui_refuse_filetransfer = 4                  " Incorrect front end or error on front end
-          invalid_type            = 5                  " Incorrect parameter FILETYPE
-          no_authority            = 6                  " No upload authorization
-          unknown_error           = 7                  " Unknown error
-          bad_data_format         = 8                  " Cannot Interpret Data in File
-          header_not_allowed      = 9                  " Invalid header
-          separator_not_allowed   = 10                 " Invalid separator
-          header_too_long         = 11                 " Header information currently restricted to 1023 bytes
-          unknown_dp_error        = 12                 " Error when calling data provider
-          access_denied           = 13                 " Access to File Denied
-          dp_out_of_memory        = 14                 " Not enough memory in data provider
-          disk_full               = 15                 " Storage medium is full.
-          dp_timeout              = 16                 " Data provider timeout
-          not_supported_by_gui    = 17                 " GUI does not support this
-          error_no_gui            = 18                 " GUI not available
-          others                  = 19 ).
+            data_tab                = ct_data                 " Transfer table for file contents
+          exceptions
+            file_open_error         = 1                  " File does not exist and cannot be opened
+            file_read_error         = 2                  " Error when reading file
+            no_batch                = 3                  " Cannot execute front-end function in background
+            gui_refuse_filetransfer = 4                  " Incorrect front end or error on front end
+            invalid_type            = 5                  " Incorrect parameter FILETYPE
+            no_authority            = 6                  " No upload authorization
+            unknown_error           = 7                  " Unknown error
+            bad_data_format         = 8                  " Cannot Interpret Data in File
+            header_not_allowed      = 9                  " Invalid header
+            separator_not_allowed   = 10                 " Invalid separator
+            header_too_long         = 11                 " Header information currently restricted to 1023 bytes
+            unknown_dp_error        = 12                 " Error when calling data provider
+            access_denied           = 13                 " Access to File Denied
+            dp_out_of_memory        = 14                 " Not enough memory in data provider
+            disk_full               = 15                 " Storage medium is full.
+            dp_timeout              = 16                 " Data provider timeout
+            not_supported_by_gui    = 17                 " GUI does not support this
+            error_no_gui            = 18                 " GUI not available
+            others                  = 19 ).
         if sy-subrc <> 0.
           message id sy-msgid type sy-msgty number sy-msgno
             with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.

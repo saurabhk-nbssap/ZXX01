@@ -845,9 +845,12 @@ class lcl_helper implementation.
                lc_range_header  type c length 50 value 'RANGE_HEADER',
                lc_range_data    type c length 50 value 'RANGE_DATA',
                lc_string_format type c length 1 value '@',
-               lc_sheet_name    type string value 'SAP_DATA'.
+               lc_sheet_name    type string value 'SAP_DATA',
+               lc_binary        type c length 10 value 'BIN'.
 
     field-symbols: <lt_data> type standard table.
+
+    data(lt_data) = value solix_tab( ).
 
     clear rv_data.
     if it_multi_sheet_data is not initial.
@@ -914,6 +917,8 @@ class lcl_helper implementation.
               unassign <lt_data>.
               assign ls_sheet-data->* to <lt_data>.
               if <lt_data> is assigned.
+                data(lv_rows) = lines( <lt_data> ).
+
                 lo_sheet_interface->add_sheet(
                   exporting
                     name     = condense( cond char100( when ls_sheet-name is not initial
@@ -923,127 +928,133 @@ class lcl_helper implementation.
                     error    = lo_error       " Error?
                     retcode  = lv_retcode ).  " Text of Error
 
-                data(lt_fields) = ls_sheet-fields.
-                if lt_fields is not initial or ls_sheet-header = abap_true.
-                  data(lo_struct_descr) = cast cl_abap_structdescr(
-                                            cast cl_abap_tabledescr(
-                                              cl_abap_typedescr=>describe_by_data(
-                                                exporting
-                                                  p_data = <lt_data> ) )->get_table_line_type( ) ).
+                if lv_retcode = c_oi_errors=>ret_ok.
+                  data(lt_fields) = ls_sheet-fields.
+                  if lt_fields is not initial or ls_sheet-header = abap_true.
+                    data(lo_struct_descr) = cast cl_abap_structdescr(
+                                              cast cl_abap_tabledescr(
+                                                cl_abap_typedescr=>describe_by_data(
+                                                  exporting
+                                                    p_data = <lt_data> ) )->get_table_line_type( ) ).
 
-                  data(lt_components) = cond #( when lo_struct_descr is bound
-                                                then lo_struct_descr->get_components( ) ).
+                    data(lt_components) = cond #( when lo_struct_descr is bound
+                                                  then lo_struct_descr->get_components( ) ).
 
-                  loop at lt_components into data(ls_component) where as_include = abap_true.
-                    append lines of cast cl_abap_structdescr( ls_component-type )->get_components( ) to lt_components.
-                    clear ls_component.
-                  endloop.
-
-                  delete lt_components where as_include = abap_true.
-
-                  if lt_fields is not initial.
-                    loop at lt_fields assigning field-symbol(<ls_field>) where name is initial.
-                      try.
-                          <ls_field>-name = lt_components[ sy-tabix ]-name.
-                        catch cx_sy_itab_line_not_found ##no_handler.
-                      endtry.
+                    loop at lt_components into data(ls_component) where as_include = abap_true.
+                      append lines of cast cl_abap_structdescr( ls_component-type )->get_components( ) to lt_components.
+                      clear ls_component.
                     endloop.
-                  else.
-                    lt_fields = corresponding #( lt_components ).
+
+                    delete lt_components where as_include = abap_true.
+
+                    if lt_fields is not initial.
+                      loop at lt_fields assigning field-symbol(<ls_field>) where name is initial.
+                        try.
+                            <ls_field>-name = lt_components[ sy-tabix ]-name.
+                          catch cx_sy_itab_line_not_found ##no_handler.
+                        endtry.
+                      endloop.
+                    else.
+                      lt_fields = corresponding #( lt_components ).
+                    endif.
+
+                    data(lv_columns) = lines( lt_components ).
+
+                    " add header row
+                    lo_sheet_interface->insert_range_dim(
+                      exporting
+                        name      = lc_range_header     " Name of Range
+                        left      = 1                   " Top Left-Hand Corner    ; top-left cell and fill entire first row = header
+                        top       = 1                   " Top Left-Hand Corner
+                        rows      = 1                   " Rows
+                        columns   = lv_columns          " Columns
+                      importing
+                        error     = lo_error            " Errors?
+                        retcode   = lv_retcode ).       " text
+
+                    lo_sheet_interface->set_format_string(
+                      exporting
+                        rangename    = lc_range_header    " Name of Range
+                        formatstring = lc_string_format   " Format String
+                      importing
+                        error        = lo_error           " Error?
+                        retcode      = lv_retcode ).      " Text of Error
+
+                    data(lt_content) = value soi_generic_table( for ls_field in lt_fields index into lv_index
+                                                                ( row     = 1
+                                                                  column  = lv_index
+                                                                  value   = ls_field-name ) ).
+
+
+                    data(lt_ranges) = value soi_range_list( ( name    = lc_range_header
+                                                              rows    = 1
+                                                              columns = lv_columns ) ).
+
+                    lo_sheet_interface->set_ranges_data(
+                      exporting
+                        ranges    = lt_ranges       " Ranges in the Sheet
+                        contents  = lt_content      " Contents of the Ranges
+                      importing
+                        error     = lo_error        " Errors?
+                        retcode   = lv_retcode ).   " Text of the Error
+
+                    lo_sheet_interface->set_color(
+                      exporting
+                        rangename = lc_range_header " Name of Range
+                        front     = 2               " Foreground color
+                        back      = 16              " Background color
+                      importing
+                        error     = lo_error        " Error?
+                        retcode   = lv_retcode ).   " Text of Error
                   endif.
+
+                  " main table data
+                  data(lt_fields_fcat) = cond #( when lo_struct_descr is bound
+                                                 then build_fields_fcat(
+                                                        exporting
+                                                          io_struct_descr = lo_struct_descr ) ).
+
+                  lv_columns = cond #( when lv_columns is initial then lines( lt_fields_fcat ) else lv_columns ).
+
+                  lo_sheet_interface->insert_range_dim(
+                    exporting
+                      name      = lc_range_data     " Name of Range
+                      left      = 1                 " Top Left-Hand Corner
+                      top       = cond #( when lt_fields is not initial or ls_sheet-header = abap_true
+                                          then 2 else 1 )                 " Top Left-Hand Corner
+                      rows      = lv_rows           " Rows
+                      columns   = lv_columns        " Columns
+                    importing
+                      error     = lo_error          " Errors?
+                      retcode   = lv_retcode ).     " text
+
+                  if ls_sheet-string = abap_true.
+                    lo_sheet_interface->set_format_string(
+                      exporting
+                        rangename    = lc_range_data      " Name of Range
+                        formatstring = lc_string_format   " Format String
+                      importing
+                        error        = lo_error           " Error?
+                        retcode      = lv_retcode ).      " Text of Error
+                  endif.
+
+                  lo_sheet_interface->insert_one_table(
+                    exporting
+                      data_table   = <lt_data>        " Data
+                      fields_table = lt_fields_fcat   " The Fields of the Table
+                      rangename    = lc_range_data    " The Name of the Range
+                      wholetable   = abap_true        " Inserts Whole Table
+                    importing
+                      error        = lo_error         " Errors?
+                      retcode      = lv_retcode ).    " Text of the Error
+
+                  lo_sheet_interface->fit_widest(
+                    exporting
+                      name     = space
+                    importing
+                      error    = lo_error       " Error?
+                      retcode  = lv_retcode ).  " text
                 endif.
-
-                data(lv_rows) = lines( <lt_data> ).
-
-                data(lv_columns) = lines( lt_components ).
-
-                " add header row
-                lo_sheet_interface->insert_range_dim(
-                  exporting
-                    name      = lc_range_header     " Name of Range
-                    left      = 1                   " Top Left-Hand Corner    ; top-left cell and fill entire first row = header
-                    top       = 1                   " Top Left-Hand Corner
-                    rows      = 1                   " Rows
-                    columns   = lv_columns          " Columns
-                  importing
-                    error     = lo_error            " Errors?
-                    retcode   = lv_retcode ).       " text
-
-                lo_sheet_interface->set_format_string(
-                  exporting
-                    rangename    = lc_range_header    " Name of Range
-                    formatstring = lc_string_format   " Format String
-                  importing
-                    error        = lo_error           " Error?
-                    retcode      = lv_retcode ).      " Text of Error
-
-                data(lt_content) = value soi_generic_table( for ls_field in lt_fields index into lv_index
-                                                            ( row     = 1
-                                                              column  = lv_index
-                                                              value   = ls_field-name ) ).
-
-
-                data(lt_ranges) = value soi_range_list( ( name    = lc_range_header
-                                                          rows    = 1
-                                                          columns = lv_columns ) ).
-
-                lo_sheet_interface->set_ranges_data(
-                  exporting
-                    ranges    = lt_ranges       " Ranges in the Sheet
-                    contents  = lt_content      " Contents of the Ranges
-                  importing
-                    error     = lo_error        " Errors?
-                    retcode   = lv_retcode ).   " Text of the Error
-
-                lo_sheet_interface->set_color(
-                  exporting
-                    rangename = lc_range_header " Name of Range
-                    front     = 2               " Foreground color
-                    back      = 16              " Background color
-                  importing
-                    error     = lo_error        " Error?
-                    retcode   = lv_retcode ).   " Text of Error
-
-                lo_sheet_interface->insert_range_dim(
-                  exporting
-                    name      = lc_range_data     " Name of Range
-                    left      = 1                 " Top Left-Hand Corner
-                    top       = 2                 " Top Left-Hand Corner
-                    rows      = lv_rows           " Rows
-                    columns   = lv_columns        " Columns
-                  importing
-                    error     = lo_error          " Errors?
-                    retcode   = lv_retcode ).     " text
-
-                lo_sheet_interface->set_format_string(
-                  exporting
-                    rangename    = lc_range_data      " Name of Range
-                    formatstring = lc_string_format   " Format String
-                  importing
-                    error        = lo_error           " Error?
-                    retcode      = lv_retcode ).      " Text of Error
-
-                data(lt_fields_fcat) = cond #( when lo_struct_descr is bound
-                                               then build_fields_fcat(
-                                                      exporting
-                                                        io_struct_descr = lo_struct_descr ) ).
-
-                lo_sheet_interface->insert_one_table(
-                  exporting
-                    data_table   = <lt_data>        " Data
-                    fields_table = lt_fields_fcat   " The Fields of the Table
-                    rangename    = lc_range_data    " The Name of the Range
-                    wholetable   = abap_true        " Inserts Whole Table
-                  importing
-                    error        = lo_error         " Errors?
-                    retcode      = lv_retcode ).    " Text of the Error
-
-                lo_sheet_interface->fit_widest(
-                  exporting
-                    name     = space
-                  importing
-                    error    = lo_error       " Error?
-                    retcode  = lv_retcode ).  " text
               endif.
 
               clear:
@@ -1079,6 +1090,49 @@ class lcl_helper implementation.
               importing
                 error       = lo_error
                 retcode     = lv_retcode ).
+
+            if lv_temp_file is not initial and zcl_helper=>check_file_exists( exporting iv_filepath = lv_temp_file ).
+              data(lv_file_length) = value i( ).
+              cl_gui_frontend_services=>gui_upload(
+                exporting
+                  filename                = lv_temp_file       " Name of file
+                  filetype                = lc_binary          " File Type (ASCII, Binary)
+                importing
+                  filelength              = lv_file_length     " File Length
+                changing
+                  data_tab                = lt_data            " Transfer table for file contents
+                exceptions
+                  file_open_error         = 1                  " File does not exist and cannot be opened
+                  file_read_error         = 2                  " Error when reading file
+                  no_batch                = 3                  " Cannot execute front-end function in background
+                  gui_refuse_filetransfer = 4                  " Incorrect front end or error on front end
+                  invalid_type            = 5                  " Incorrect parameter FILETYPE
+                  no_authority            = 6                  " No upload authorization
+                  unknown_error           = 7                  " Unknown error
+                  bad_data_format         = 8                  " Cannot Interpret Data in File
+                  header_not_allowed      = 9                  " Invalid header
+                  separator_not_allowed   = 10                 " Invalid separator
+                  header_too_long         = 11                 " Header information currently restricted to 1023 bytes
+                  unknown_dp_error        = 12                 " Error when calling data provider
+                  access_denied           = 13                 " Access to File Denied
+                  dp_out_of_memory        = 14                 " Not enough memory in data provider
+                  disk_full               = 15                 " Storage medium is full.
+                  dp_timeout              = 16                 " Data provider timeout
+                  not_supported_by_gui    = 17                 " GUI does not support this
+                  error_no_gui            = 18                 " GUI not available
+                  others                  = 19 ).
+              if sy-subrc <> 0.
+                message id sy-msgid type sy-msgty number sy-msgno
+                  with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_dummy.
+              else.
+                if lt_data is not initial.
+                  rv_data = cl_bcs_convert=>solix_to_xstring(
+                                              exporting
+                                                it_solix = lt_data
+                                                iv_size  = lv_file_length ).
+                endif.
+              endif.
+            endif.
           endif.
 
           lo_document_proxy->close_document(
