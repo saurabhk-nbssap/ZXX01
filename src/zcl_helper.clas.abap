@@ -2725,6 +2725,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         if lt_ddic_field_list is not initial.
           et_lvc_fcat = corresponding #( lt_ddic_field_list ).
 
+          " todo - fill description fields using reptext
+
           call function 'LVC_TRANSFER_TO_SLIS'
             exporting
               it_fieldcat_lvc         = et_lvc_fcat " Field Catalog

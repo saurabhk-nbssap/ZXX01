@@ -40,7 +40,7 @@ class lcl_helper definition final.
     constants: gc_esc type c length 1 value '"'.
 
     methods:
-      excel_to_itab_mass_spreadsheet
+      excel_to_itab_mass_spreadsheet  " sap office integration API
         importing
           value(iv_filename) type if_mass_spreadsheet_types=>file_name
           value(iv_sheet_no) type i default 1
@@ -49,7 +49,7 @@ class lcl_helper definition final.
         returning
           value(rt_excel)    like gt_excel,
 
-      excel_to_itab_ehfnd
+      excel_to_itab_ehfnd   " uses OpenXML/xlsx support library
         importing
           value(iv_filename)        type string
           value(iv_sheet_no)        type i default 1
@@ -77,7 +77,7 @@ class lcl_helper definition final.
         returning
           value(rr_data)   type ref to data,
 
-      itab_to_excel_ehfnd
+      itab_to_excel_ehfnd " uses OpenXML/xlsx support library
         importing
           value(it_multi_sheet_data) type zcl_helper=>tty_sheet
         returning
@@ -95,6 +95,7 @@ class lcl_helper definition final.
         returning
           value(rt_fields_fcat)  type ltty_fields_fcat,
 
+      " deprecated - Do NOT Use
       excel_to_itab_ole
         importing
           value(filename)    type  rlgrap-filename
@@ -108,6 +109,7 @@ class lcl_helper definition final.
           inconsistent_parameters
           upload_ole,
 
+      " deprecated - Do NOT Use
       separated_to_intern_convert
         importing
           value(i_separator) type char1
@@ -115,6 +117,7 @@ class lcl_helper definition final.
           value(i_tab)       type ty_t_sender
           value(i_intern)    type ty_t_itab,
 
+      " deprecated - Do NOT Use
       line_to_cell_separat
         importing
           value(i_row)       type sy-tabix
@@ -125,6 +128,7 @@ class lcl_helper definition final.
           value(i_intern)    type ty_t_itab
           value(i_line)      type ty_s_senderline,
 
+      " deprecated - Do NOT Use
       line_to_cell_esc_sep
         importing
           value(i_separator)    type char1
@@ -133,6 +137,7 @@ class lcl_helper definition final.
           value(i_sic_int)      type i
           value(i_intern_value) type ty_d_itabvalue,
 
+      " required for xls to binary conversion and vice verca
       get_temp_file_path
         returning
           value(rv_temp_file) type string,
@@ -156,15 +161,15 @@ class lcl_helper implementation.
   method excel_to_itab_ole.
     type-pools: ole2.
 
-    data: excel_tab    type  ty_t_sender,
-          ld_separator type  c length 1,
-          application  type  ole2_object,
-          workbook     type  ole2_object,
-          range        type  ole2_object,
-          worksheet    type  ole2_object,
-          h_cell       type  ole2_object,
-          h_cell1      type  ole2_object,
-          ld_rc        type  i,
+    data: excel_tab    type ty_t_sender,
+          ld_separator type c length 1,
+          application  type ole2_object,
+          workbook     type ole2_object,
+          range        type ole2_object,
+          worksheet    type ole2_object,
+          h_cell       type ole2_object,
+          h_cell1      type ole2_object,
+          ld_rc        type i,
           intern       like gt_alsmex_tabline.
 *   Rückgabewert der Methode "clipboard_export     "
 
@@ -626,6 +631,8 @@ class lcl_helper implementation.
         catch cx_openxml_not_found.
       endtry.
     endif.
+
+    delete et_sheets where num_rows < 0 or num_cols < 0.  " delete empty content of standard excel sheet - Sheet1
   endmethod.
 
   method itab_to_excel_ehfnd.
@@ -1075,6 +1082,7 @@ class lcl_helper implementation.
                       error     = lo_error        " Errors?
                       retcode   = lv_retcode ).   " Text of the Error
 
+                  " returns message SOFFICEINTEGRATION 205 many a times - above method is an alternative that works
 *                  lo_sheet_interface->insert_one_table(
 *                    exporting
 *                      data_table   = <lt_data>        " Data
