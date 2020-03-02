@@ -144,7 +144,13 @@ class lcl_helper definition final.
 
       delete_temp_file
         importing
-          value(iv_temp_file) type string.
+          value(iv_temp_file) type string,
+
+      validate_file_path
+        importing
+          value(iv_filepath) type string
+        returning
+          value(rv_valid)    type abap_bool.
 
 *  protected section.
     " placeholder
@@ -1293,6 +1299,48 @@ class lcl_helper implementation.
             with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
         endif.
       endif.
+    endif.
+  endmethod.
+
+  method validate_file_path.
+    clear rv_valid.
+    if iv_filepath is not initial.
+      data(lv_filepath) = iv_filepath.
+      " basic check
+      " first check direct existence
+      rv_valid = zcl_helper=>check_file_exists( exporting iv_filepath = lv_filepath ).
+      if rv_valid = abap_true.
+        return.
+      endif.
+
+      " setup
+      try.
+          data(lo_path) = cl_fs_path=>create(
+                            exporting
+                              name           = lv_filepath
+                              path_kind      = cond #( when lv_filepath ca zcl_helper=>gc_path_sep-windows then 'W'
+                                                       when lv_filepath ca zcl_helper=>gc_path_sep-unix then 'U' ) ).
+
+          if lo_path is bound.
+            data(lv_directory) = lo_path->get_path_component( ).
+            data(lv_file_name) = lo_path->get_file_name( ).
+            data(lv_extension) = lo_path->get_file_extension( ).
+          endif.
+        catch cx_smart_path_syntax. " Syntax error in smart path
+      endtry.
+
+* ---- Compute filepath type ---- *
+      data(lv_file_path_type) = cond #( when lv_filepath ca zcl_helper=>gc_path_sep-windows then zcl_helper=>gc_path_sep-windows
+                                        when lv_filepath ca zcl_helper=>gc_path_sep-unix then zcl_helper=>gc_path_sep-unix ).
+
+      case lv_file_path_type.
+        when zcl_helper=>gc_path_sep-windows.
+          " split the filepath into parts and validate separately
+
+        when zcl_helper=>gc_path_sep-unix.
+          " split the filepath into parts and validate separately
+        when others.
+      endcase.
     endif.
   endmethod.
 endclass.
