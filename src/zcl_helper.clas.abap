@@ -2590,131 +2590,56 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       rt_data = lt_data.
 
       if iv_direct_download = abap_true.
-        data(lv_initial_folder) = value string( ).
-        data(lv_selected_folder) = value string( ).
-        cl_gui_frontend_services=>get_desktop_directory(
-          changing
-            desktop_directory    = lv_initial_folder " Desktop Directory
-          exceptions
-            cntl_error           = 1                 " Control error
-            error_no_gui         = 2                 " No GUI available
-            not_supported_by_gui = 3                 " GUI does not support this
-            others               = 4 ).
-        if sy-subrc <> 0.
-          message id sy-msgid type sy-msgty number sy-msgno
-            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-        else.
-          cl_gui_cfw=>flush(
-            exceptions
-              cntl_system_error = 1 " cntl_system_error
-              cntl_error        = 2 " cntl_error
-              others            = 3 ).
-          if sy-subrc <> 0.
-            message id sy-msgid type sy-msgty number sy-msgno
-              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-          endif.
-        endif.
-
         data:
           lv_window_title      type string,
-          lv_path              type string,
           lv_fullpath          type string,
-          lv_user_action       type i,
           lv_default_extension type string,
           lv_default_file_name type string,
-          lv_file_filter       type string,
-          lv_filename          type string.
+          lv_file_filter       type string.
 
         clear:
           lv_window_title,
-          lv_path,
-          lv_user_action,
           lv_default_extension,
           lv_default_file_name,
-          lv_file_filter,
-          lv_filename.
+          lv_file_filter.
 
         lv_window_title = 'Specify folder and file name to save excel file'.
         lv_default_extension = lv_file_ext.
         lv_file_filter = |Excel files(*.{ lv_file_ext })\|*.{ lv_file_ext }|. " description|*.extension
         lv_default_file_name = replace( val = to_upper( iv_file_name ) sub = |.{ lv_file_ext }| with = '' occ = 0 ).
 
-        cl_gui_frontend_services=>file_save_dialog(
-          exporting
-            window_title      = lv_window_title
-            default_extension = lv_default_extension
-            default_file_name = lv_default_file_name
-            file_filter       = lv_file_filter
-            initial_directory = lv_initial_folder
-          changing
-            filename          = lv_filename
-            path              = lv_path
-            fullpath          = lv_fullpath
-            user_action       = lv_user_action
-          exceptions
-            cntl_error        = 1
-            error_no_gui      = 2
-            others            = 3 ).
-        if sy-subrc <> 0.
-          message id sy-msgid type sy-msgty number sy-msgno
-          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        lv_fullpath = file_save_dialog(
+                        exporting
+                          iv_window_title      = lv_window_title
+                          iv_file_filter       = lv_file_filter
+                          iv_default_extension = lv_default_extension
+                          iv_default_file_name = lv_default_file_name ).
+
+        if lv_fullpath is not initial.
+          try.
+              data(lv_uploaded) = write_file_to_path(
+                exporting
+                  iv_filepath    = lv_fullpath        " Path of file to write to on frontend or app server
+                  iv_file_length = lv_file_length     " Size of binary data
+                  it_data        = lt_data ).         " Binary Data
+            catch zcx_generic into data(lox_generic). " Generic Exception Class
+              message lox_generic type 'S' display like 'E'.
+          endtry.
         else.
-          if lv_fullpath is not initial.
-            cl_gui_frontend_services=>gui_download(
-              exporting
-                bin_filesize              = lv_file_length
-                filename                  = lv_fullpath
-                filetype                  = 'BIN'
-                confirm_overwrite         = abap_true
-              importing
-                filelength                = data(lv_bytes_transferred)
-              changing
-                data_tab                  = lt_data
-              exceptions
-                file_write_error          = 1
-                no_batch                  = 2
-                gui_refuse_filetransfer   = 3
-                invalid_type              = 4
-                no_authority              = 5
-                unknown_error             = 6
-                header_not_allowed        = 7
-                separator_not_allowed     = 8
-                filesize_not_allowed      = 9
-                header_too_long           = 10
-                dp_error_create           = 11
-                dp_error_send             = 12
-                dp_error_write            = 13
-                unknown_dp_error          = 14
-                access_denied             = 15
-                dp_out_of_memory          = 16
-                disk_full                 = 17
-                dp_timeout                = 18
-                file_not_found            = 19
-                dataprovider_exception    = 20
-                control_flush_error       = 21
-                not_supported_by_gui      = 22
-                error_no_gui              = 23
-                others                    = 24 ).
-            if sy-subrc <> 0.
-              message id sy-msgid type sy-msgty number sy-msgno
-                         with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-            else.
-              message s001(00) with lv_bytes_transferred ' bytes transferred'.
-            endif.
-          else.
-            message 'No folder selected' type 'S' display like 'E'.
-          endif.
+          message 'No folder selected' type 'S' display like 'E'.
         endif.
       endif.
+
       if iv_app_server_filepath is not initial.
         data(lv_app_server_filepath) = iv_app_server_filepath.
         try.
-            data(lv_uploaded) = write_file_to_path(
-                                  exporting
-                                    iv_filepath    = lv_app_server_filepath   " Path of file on app server
-                                    iv_file_length = lv_file_length
-                                    it_data        = lt_data ).               " Binary data to be uploaded
-          catch zcx_generic into data(lox_generic). " Generic Exception Class
+            clear lv_uploaded.
+            lv_uploaded = write_file_to_path(
+                            exporting
+                              iv_filepath    = lv_app_server_filepath   " Path of file on app server
+                              iv_file_length = lv_file_length
+                              it_data        = lt_data ).               " Binary data to be uploaded
+          catch zcx_generic into lox_generic. " Generic Exception Class
             message lox_generic type 'S' display like 'E'.
         endtry.
       endif.
@@ -3169,6 +3094,12 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         endif.
         if lv_filepath is not initial.
           " to-do: validate filename/path
+
+          if lv_file_length is initial.
+            lv_file_length = xstrlen( cl_bcs_convert=>solix_to_xstring(
+                                        exporting
+                                          it_solix = lt_data ) ).
+          endif.
           cl_gui_frontend_services=>gui_download(
               exporting
                 bin_filesize              = cond #( when lv_file_length is not initial then lv_file_length )
