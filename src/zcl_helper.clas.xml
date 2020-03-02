@@ -79,7 +79,7 @@
      <CLSNAME>ZCL_HELPER</CLSNAME>
      <CMPNAME>DELETE_FILE</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Delete specified file from app server</DESCRIPT>
+     <DESCRIPT>Delete specified file from frontend/app server</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>

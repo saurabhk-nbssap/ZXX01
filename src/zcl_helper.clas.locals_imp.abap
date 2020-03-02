@@ -148,9 +148,10 @@ class lcl_helper definition final.
 
       validate_file_path
         importing
-          value(iv_filepath) type string
+          value(iv_filepath)          type string
+          value(iv_contains_filename) type abap_bool
         returning
-          value(rv_valid)    type abap_bool.
+          value(rv_valid)             type abap_bool.
 
 *  protected section.
     " placeholder
@@ -1336,9 +1337,62 @@ class lcl_helper implementation.
       case lv_file_path_type.
         when zcl_helper=>gc_path_sep-windows.
           " split the filepath into parts and validate separately
+          cl_gui_frontend_services=>directory_exist(
+            exporting
+              directory            = lv_directory " Directory name
+            receiving
+              result               = rv_valid    " Result
+            exceptions
+              cntl_error           = 1         " Control error
+              error_no_gui         = 2         " No GUI available
+              wrong_parameter      = 3         " Incorrect parameter
+              not_supported_by_gui = 4         " GUI does not support this
+              others               = 5 ).
+          if sy-subrc <> 0.
+            message id sy-msgid type sy-msgty number sy-msgno
+              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into data(lv_dummy).
+          endif.
 
+          if iv_contains_filename = abap_true and ( lv_file_name is initial or lv_extension is initial ).
+            rv_valid = abap_false.
+          endif.
         when zcl_helper=>gc_path_sep-unix.
           " split the filepath into parts and validate separately
+          " get directory listing
+          data: lv_err_no  type c length 3,
+                lv_err_msg type c length 40.
+
+          call 'C_DIR_READ_FINISH'                  " just to be sure
+            id 'ERRNO'  field lv_err_no
+            id 'ERRMSG' field lv_err_msg.
+
+          call 'C_DIR_READ_START'
+            id 'DIR'    field lv_directory
+            id 'FILE'   field '*'
+            id 'ERRNO'  field lv_err_no
+            id 'ERRMSG' field lv_err_msg.
+          if sy-subrc = 0.
+            rv_valid = abap_true.
+          endif.
+
+          call 'C_DIR_READ_FINISH'
+            id 'ERRNO'  field lv_err_no
+            id 'ERRMSG' field lv_err_msg.
+
+          constants: lc_logical_filename type filename-fileintern value 'EHS_FTAPPL_2'. " same as that used in CG3Y
+* ---- validate physical filename against logical filename ---- *
+          call function 'FILE_VALIDATE_NAME'
+            exporting
+              logical_filename           = lc_logical_filename
+            changing
+              physical_filename          = lv_filepath
+            exceptions
+              logical_filename_not_found = 1
+              validation_failed          = 2
+              others                     = 3.
+          if sy-subrc = 0.
+            rv_valid = abap_true.
+          endif.
         when others.
       endcase.
     endif.

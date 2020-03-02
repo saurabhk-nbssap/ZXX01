@@ -1831,11 +1831,11 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 *        endif.
           lt_excel = lo_helper->excel_to_itab_ehfnd(
                        exporting
-                         iv_filename = conv #( iv_file )
-                         iv_sheet_no = iv_sheet_number
+                         iv_filename        = conv #( iv_file )
+                         iv_sheet_no        = iv_sheet_number
                          iv_read_all_sheets = iv_read_all_sheets
                        importing
-                         et_sheets   = lt_sheets ).
+                         et_sheets          = lt_sheets ).
       endcase.
     endif.
 
@@ -2528,6 +2528,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     data(lv_file_ext) = value char50( ).
     data(lv_file) = cond char1024( when iv_file_name is not initial then iv_file_name
                                    when iv_app_server_filepath is not initial then iv_app_server_filepath ).
+
     call function 'TRINT_FILE_GET_EXTENSION'
       exporting
         filename  = lv_file
@@ -2556,8 +2557,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
     data(lt_multi_sheet_data) = it_multi_sheet_data.
     if it_itab is not initial.
-      insert value #( name = iv_sheet_name
-                      data = ref #( it_itab )
+      insert value #( name   = iv_sheet_name
+                      data   = ref #( it_itab )
                       fields = it_fields
                       string = iv_force_string
                       header = iv_insert_header ) into lt_multi_sheet_data index 1.
@@ -2590,30 +2591,38 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       rt_data = lt_data.
 
       if iv_direct_download = abap_true.
-        data:
-          lv_window_title      type string,
-          lv_fullpath          type string,
-          lv_default_extension type string,
-          lv_default_file_name type string,
-          lv_file_filter       type string.
+        if not lo_helper->validate_file_path(
+                 exporting
+                   iv_filepath          = iv_file_name
+                   iv_contains_filename = abap_true ).
+          data:
+            lv_window_title      type string,
+            lv_fullpath          type string,
+            lv_default_extension type string,
+            lv_default_file_name type string,
+            lv_file_filter       type string.
 
-        clear:
-          lv_window_title,
-          lv_default_extension,
-          lv_default_file_name,
-          lv_file_filter.
+          clear:
+            lv_window_title,
+            lv_default_extension,
+            lv_default_file_name,
+            lv_file_filter.
 
-        lv_window_title = 'Specify folder and file name to save excel file'.
-        lv_default_extension = lv_file_ext.
-        lv_file_filter = |Excel files(*.{ lv_file_ext })\|*.{ lv_file_ext }|. " description|*.extension
-        lv_default_file_name = replace( val = to_upper( iv_file_name ) sub = |.{ lv_file_ext }| with = '' occ = 0 ).
+          lv_window_title = 'Specify folder and file name to save excel file'.
+          lv_default_extension = lv_file_ext.
+          lv_file_filter = |Excel files(*.{ lv_file_ext })\|*.{ lv_file_ext }|. " description|*.extension
+          lv_default_file_name = replace( val = to_upper( iv_file_name ) sub = |.{ lv_file_ext }| with = '' occ = 0 ).
 
-        lv_fullpath = file_save_dialog(
-                        exporting
-                          iv_window_title      = lv_window_title
-                          iv_file_filter       = lv_file_filter
-                          iv_default_extension = lv_default_extension
-                          iv_default_file_name = lv_default_file_name ).
+          lv_fullpath = file_save_dialog(
+                          exporting
+                            iv_window_title      = lv_window_title
+                            iv_file_filter       = lv_file_filter
+                            iv_default_extension = lv_default_extension
+                            iv_default_file_name = lv_default_file_name ).
+
+        else.
+          lv_fullpath = iv_file_name.
+        endif.
 
         if lv_fullpath is not initial.
           try.
@@ -3094,13 +3103,16 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         endif.
         if lv_filepath is not initial.
           " to-do: validate filename/path
-
-          if lv_file_length is initial.
-            lv_file_length = xstrlen( cl_bcs_convert=>solix_to_xstring(
-                                        exporting
-                                          it_solix = lt_data ) ).
-          endif.
-          cl_gui_frontend_services=>gui_download(
+          if lo_helper->validate_file_path(
+               exporting
+                 iv_filepath          = lv_filepath
+                 iv_contains_filename = abap_true ).
+            if lv_file_length is initial.
+              lv_file_length = xstrlen( cl_bcs_convert=>solix_to_xstring(
+                                          exporting
+                                            it_solix = lt_data ) ).
+            endif.
+            cl_gui_frontend_services=>gui_download(
               exporting
                 bin_filesize              = cond #( when lv_file_length is not initial then lv_file_length )
                 filename                  = lv_filepath
@@ -3135,14 +3147,18 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                 not_supported_by_gui      = 22
                 error_no_gui              = 23
                 others                    = 24 ).
-          if sy-subrc <> 0.
-            message id sy-msgid type sy-msgty number sy-msgno
-                       with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
-            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+            if sy-subrc <> 0.
+              message id sy-msgid type sy-msgty number sy-msgno
+                         with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
+              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+            else.
+              message |{ lv_bytes_transferred } bytes transferred to { lv_filepath }| type 'S'.
+              " verify data upload...
+              rv_uploaded = check_file_exists( iv_filepath = lv_filepath ).
+            endif.
           else.
-            message |{ lv_bytes_transferred } bytes transferred to { lv_filepath }| type 'S'.
-            " verify data upload...
-            rv_uploaded = check_file_exists( iv_filepath = lv_filepath ).
+            lv_msg = 'Invalid filepath specified'.
+            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
           endif.
         endif.
       when gc_path_sep-unix.
