@@ -205,7 +205,13 @@
      <CLSNAME>ZCL_HELPER</CLSNAME>
      <CMPNAME>WRITE_FILE_TO_APP_SERVER</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Write file from frontend or binary data to app server path</DESCRIPT>
+     <DESCRIPT>Write binary data to file path on frontend or app server</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>WRITE_FILE_TO_PATH</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Write binary data to file path on frontend or app server</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
