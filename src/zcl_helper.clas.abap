@@ -53,6 +53,11 @@ public section.
         _9      type i value 9,
         _10     type i value 10,
       end of gc_s_sheet_number .
+  constants:
+    begin of gc_path_sep,
+      windows type c length 1 value '\',
+      unix    type c length 1 value '/',
+    end of gc_path_sep .
 
   class-methods XML_TO_ABAP
     importing
@@ -138,32 +143,28 @@ public section.
       value(IV_DEFAULT_FILE_NAME) type STRING optional
     returning
       value(RV_FILE) type STRING .
-  class-methods WRITE_FILE_TO_APP_SERVER
+  class-methods WRITE_FILE_TO_PATH
     importing
-      value(IV_FRONTEND_FILEPATH) type STRING optional
+      value(IV_FILEPATH) type STRING
       value(IV_OVERWRITE) type ABAP_BOOL default ABAP_FALSE
       value(IV_FILE_LENGTH) type I optional
-    changing
-      value(CV_APP_SERVER_FILEPATH) type STRING optional
-      value(CT_DATA) type SOLIX_TAB optional
+      value(IT_DATA) type SOLIX_TAB
     returning
       value(RV_UPLOADED) type ABAP_BOOL
     raising
       ZCX_GENERIC .
-  class-methods READ_FILE_FROM_APP_SERVER
+  class-methods READ_FILE_FROM_PATH
     importing
-      value(IV_APP_SERVER_FILEPATH) type STRING
-      value(IV_FRONTEND_FILEPATH) type STRING optional
-      value(IV_DOWNLOAD_PROMPT) type ABAP_BOOL optional
+      value(IV_FILEPATH) type STRING
     exporting
       value(EV_FILE_LENGTH) type I
     returning
       value(RT_DATA) type SOLIX_TAB
     raising
       ZCX_GENERIC .
-  class-methods DELETE_FILE_FROM_APP_SERVER
+  class-methods DELETE_FILE
     importing
-      value(IV_APP_SERVER_FILEPATH) type STRING
+      value(IV_FILEPATH) type STRING
     exporting
       value(EV_MESSAGE) type STRING
     returning
@@ -1327,53 +1328,71 @@ CLASS ZCL_HELPER IMPLEMENTATION.
   endmethod.
 
 
-  method delete_file_from_app_server.
+  method delete_file.
 
     clear:
       ev_message,
       rv_deleted.
 
-    data(lv_app_server_filepath) = iv_app_server_filepath.
+    data(lv_filepath) = iv_filepath.
+    data(lo_helper) = new lcl_helper( ).
 
-    if lv_app_server_filepath is initial.
+    if lv_filepath is initial.
       ev_message = 'Please supply path of file to delete on app server'.
       return.
     endif.
 
-    data(lv_program) = conv authb-program( sy-cprog ).
-    data(lv_auth_filename) = conv authb-filename( lv_app_server_filepath ).
-    call function 'AUTHORITY_CHECK_DATASET'
-      exporting
-        program          = lv_program  " ABAP program in which access occurs
-        activity         = sabc_act_delete " Access Type (See Function Documentation)
-        filename         = lv_auth_filename " File name
-      exceptions
-        no_authority     = 1        " You are not authorized for this access
-        activity_unknown = 2        " Access type unknown
-        others           = 3.
-    if sy-subrc <> 0.
-      case sy-subrc.
-        when 1.
-          ev_message = 'Not authorised to delete the file from app server'.
-        when others.
-          ev_message = 'File open error'.
-      endcase.
-      return.
-    endif.
+* ---- Compute filepath type ---- *
+    data(lv_file_path_type) = cond #( when lv_filepath ca gc_path_sep-windows then gc_path_sep-windows
+                                      when lv_filepath ca gc_path_sep-unix then gc_path_sep-unix ).
 
-    try.
-        delete dataset lv_app_server_filepath.
-        case sy-subrc.
-          when 0.
-            rv_deleted = abap_true.
-          when others.
-            ev_message = 'File could not be deleted.'.
-        endcase.
-      catch cx_sy_file_authority into data(lox_file_authority).
-        ev_message = lox_file_authority->get_text( ).
-      catch cx_sy_file_open into data(lox_file_open).
-        ev_message = lox_file_open->get_text( ).
-    endtry.
+    case lv_file_path_type.
+      when gc_path_sep-windows.
+        if sy-batch = abap_true.
+          ev_message = 'GUI not available in background mode'.
+          return.
+        endif.
+        if lo_helper is bound.
+          lo_helper->delete_temp_file( exporting iv_temp_file = lv_filepath ).
+          rv_deleted = xsdbool( check_file_exists( exporting iv_filepath = lv_filepath ) = abap_false ).
+        endif.
+      when gc_path_sep-unix.
+        data(lv_program) = conv authb-program( sy-cprog ).
+        data(lv_auth_filename) = conv authb-filename( lv_filepath ).
+        call function 'AUTHORITY_CHECK_DATASET'
+          exporting
+            program          = lv_program  " ABAP program in which access occurs
+            activity         = sabc_act_delete " Access Type (See Function Documentation)
+            filename         = lv_auth_filename " File name
+          exceptions
+            no_authority     = 1        " You are not authorized for this access
+            activity_unknown = 2        " Access type unknown
+            others           = 3.
+        if sy-subrc <> 0.
+          case sy-subrc.
+            when 1.
+              ev_message = 'Not authorised to delete the file from app server'.
+            when others.
+              ev_message = 'File open error'.
+          endcase.
+          return.
+        endif.
+        try.
+            delete dataset lv_filepath.
+            case sy-subrc.
+              when 0.
+                rv_deleted = abap_true.
+                rv_deleted = xsdbool( check_file_exists( exporting iv_filepath = lv_filepath ) = abap_false ).
+              when others.
+                ev_message = 'File could not be deleted.'.
+            endcase.
+          catch cx_sy_file_authority into data(lox_file_authority).
+            ev_message = lox_file_authority->get_text( ).
+          catch cx_sy_file_open into data(lox_file_open).
+            ev_message = lox_file_open->get_text( ).
+        endtry.
+      when others.
+    endcase.
   endmethod.
 
 
@@ -2690,12 +2709,11 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       if iv_app_server_filepath is not initial.
         data(lv_app_server_filepath) = iv_app_server_filepath.
         try.
-            data(lv_uploaded) = write_file_to_app_server(
+            data(lv_uploaded) = write_file_to_path(
                                   exporting
+                                    iv_filepath    = lv_app_server_filepath   " Path of file on app server
                                     iv_file_length = lv_file_length
-                                  changing
-                                    cv_app_server_filepath = lv_app_server_filepath " Path of file on app server
-                                    ct_data                = lt_data ).               " Binary data to be uploaded
+                                    it_data        = lt_data ).               " Binary data to be uploaded
           catch zcx_generic into data(lox_generic). " Generic Exception Class
             message lox_generic type 'S' display like 'E'.
         endtry.
@@ -2772,7 +2790,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
   endmethod.
 
 
-  method read_file_from_app_server.
+  method read_file_from_path.
     constants: lc_msg_id           type syst-msgid value '00',
                lc_msg_no           type syst-msgno value '001',
                lc_logical_filename type filename-fileintern value 'EHS_FTAPPL_2', " same as that used in CG3Y
@@ -2780,178 +2798,158 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
     data ls_data like line of rt_data.
 
-    data(lv_app_server_filepath) = iv_app_server_filepath.
-    data(lv_frontend_filepath) = iv_frontend_filepath.
-    data(lv_download_prompt) = iv_download_prompt.
+    data(lv_filepath) = iv_filepath.
 
     clear:
       ls_data,
       ev_file_length,
       rt_data.
 
-    if lv_app_server_filepath is initial.
-      data(lv_msg) = conv bapi_msg( 'Please supply path of the file on the app server.' ).
+    if lv_filepath is initial.
+      data(lv_msg) = conv bapi_msg( 'Mandatory input missing: Filepath' ).
       raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
     endif.
 
-    if lv_frontend_filepath is not initial and lv_download_prompt = abap_true.
-      lv_msg = 'Invalid param comb: Frontend path, download prompt'.
+    if not check_file_exists( exporting iv_filepath = lv_filepath ).
+      lv_msg = conv bapi_msg( 'Requested file does not exist' ).
       raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
     endif.
 
-* ---- check the authority to read the file from the application server ---- *
-    data(lv_program) = conv authb-program( sy-cprog ).
-    data(lv_auth_filename) = conv authb-filename( lv_app_server_filepath ).
-    call function 'AUTHORITY_CHECK_DATASET'
-      exporting
-        program          = lv_program  " ABAP program in which access occurs
-        activity         = sabc_act_read " Access Type (See Function Documentation)
-        filename         = lv_auth_filename " File name
-      exceptions
-        no_authority     = 1        " You are not authorized for this access
-        activity_unknown = 2        " Access type unknown
-        others           = 3.
-    if sy-subrc <> 0.
-      case sy-subrc.
-        when 1.
-          lv_msg = 'Not authorised to write the file to app server'.
-        when others.
-          lv_msg = 'File open error'.
-      endcase.
-      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    endif.
+* ---- Compute filepath type ---- *
+    data(lv_file_path_type) = cond #( when lv_filepath ca gc_path_sep-windows then gc_path_sep-windows
+                                      when lv_filepath ca gc_path_sep-unix then gc_path_sep-unix ).
 
-* ---- check if the frontend file exists ---- *
-*    if lv_frontend_filepath is not initial.
-*      if not check_file_exists( exporting iv_filepath = lv_frontend_filepath ).
-*        lv_msg = 'Frontend file path does not exist'.
-*        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-*      endif.
-*    endif.
-
-    if not check_file_exists( exporting iv_filepath = lv_app_server_filepath ).
-      lv_msg = 'App server file path does not exist'.
-      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    endif.
-
-* ---- validate physical filename against logical filename ---- *
-    call function 'FILE_VALIDATE_NAME'
-      exporting
-        logical_filename           = lc_logical_filename
-      changing
-        physical_filename          = lv_app_server_filepath
-      exceptions
-        logical_filename_not_found = 1
-        validation_failed          = 2
-        others                     = 3.
-    if sy-subrc <> 0.
-      message id sy-msgid type sy-msgty number sy-msgno
-        with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
-      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    endif.
-
-    try.
-        " open the dataset for reading
-        open dataset lv_app_server_filepath for input in binary mode.
-        if sy-subrc = 0.
-          try.
-              do.
-                clear ls_data.
-                read dataset lv_app_server_filepath into ls_data length data(lv_len).
-                if sy-subrc <> 0.
-                  if lv_len > 0.
-                    ev_file_length = ev_file_length + lv_len.
-                    append ls_data to rt_data.
-                  endif.
-                  exit.
-                endif.
-                ev_file_length = ev_file_length + lv_len.
-                append ls_data to rt_data.
-              enddo.
-              try.
-                  " close the dataset after reading
-                  close dataset lv_app_server_filepath.
-
-                  if rt_data is not initial.
-                    if lv_frontend_filepath is not initial or lv_download_prompt = abap_true.
-                      if lv_download_prompt = abap_true.
-                        lv_frontend_filepath = file_save_dialog( ).
-                      endif.
-                      if lv_frontend_filepath is not initial.
-                        cl_gui_frontend_services=>gui_download(
-                          exporting
-                            bin_filesize              = ev_file_length          " File length for binary files
-                            filename                  = lv_frontend_filepath    " Name of file
-                            filetype                  = lc_binary               " File type (ASCII, binary ...)
-                          importing
-                            filelength                = ev_file_length          " Number of bytes transferred
-                          changing
-                            data_tab                  = rt_data                 " Transfer table
-                          exceptions
-                            file_write_error          = 1                    " Cannot write to file
-                            no_batch                  = 2                    " Cannot execute front-end function in background
-                            gui_refuse_filetransfer   = 3                    " Incorrect Front End
-                            invalid_type              = 4                    " Invalid value for parameter FILETYPE
-                            no_authority              = 5                    " No Download Authorization
-                            unknown_error             = 6                    " Unknown error
-                            header_not_allowed        = 7                    " Invalid header
-                            separator_not_allowed     = 8                    " Invalid separator
-                            filesize_not_allowed      = 9                    " Invalid file size
-                            header_too_long           = 10                   " Header information currently restricted to 1023 bytes
-                            dp_error_create           = 11                   " Cannot create DataProvider
-                            dp_error_send             = 12                   " Error Sending Data with DataProvider
-                            dp_error_write            = 13                   " Error Writing Data with DataProvider
-                            unknown_dp_error          = 14                   " Error when calling data provider
-                            access_denied             = 15                   " Access to File Denied
-                            dp_out_of_memory          = 16                   " Not enough memory in data provider
-                            disk_full                 = 17                   " Storage medium is full.
-                            dp_timeout                = 18                   " Data provider timeout
-                            file_not_found            = 19                   " Could not find file
-                            dataprovider_exception    = 20                   " General Exception Error in DataProvider
-                            control_flush_error       = 21                   " Error in Control Framework
-                            not_supported_by_gui      = 22                   " GUI does not support this
-                            error_no_gui              = 23                   " GUI not available
-                            others                    = 24 ).
-                        if sy-subrc <> 0.
-                          message id sy-msgid type sy-msgty number sy-msgno
-                            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
-                          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-                        else.
-                          if check_file_exists( exporting iv_filepath = lv_frontend_filepath ).
-*                            message 'File downloaded successfully' type 'S'.
-                          endif.
-                        endif.
-                      else.
-                        lv_msg = 'Frontend file path not supplied/selected'.
-                        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-                      endif.
-                    endif.
-                  endif.
-                catch cx_sy_file_close into data(lox_file_close).
-                  lv_msg = lox_file_close->get_text( ).
-                  raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-              endtry.
-            catch cx_sy_file_io into data(lox_file_io).
-              lv_msg = lox_file_io->get_text( ).
-              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-            catch cx_sy_file_open_mode into data(lox_file_open_mode).
-              lv_msg = lox_file_open_mode->get_text( ).
-              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-          endtry.
-        else.
-          lv_msg = 'File open error'.
+    case lv_file_path_type.
+      when gc_path_sep-windows.
+        if sy-batch = abap_true.
+          lv_msg = 'GUI not available in background mode'.
           raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
         endif.
-      catch cx_sy_file_authority into data(lox_file_authority).
-        lv_msg = lox_file_authority->get_text( ).
-        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-      catch cx_sy_file_open into data(lox_file_open).
-        lv_msg = lox_file_open->get_text( ).
-        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-      catch cx_sy_too_many_files into data(lox_too_many_files).
-        lv_msg = lox_too_many_files->get_text( ).
-        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    endtry.
+        cl_gui_frontend_services=>gui_upload(
+          exporting
+            filename                = lv_filepath        " Name of file
+            filetype                = lc_binary          " File Type (ASCII, Binary)
+          importing
+            filelength              = ev_file_length     " File Length
+          changing
+            data_tab                = rt_data            " Transfer table for file contents
+          exceptions
+            file_open_error         = 1                  " File does not exist and cannot be opened
+            file_read_error         = 2                  " Error when reading file
+            no_batch                = 3                  " Cannot execute front-end function in background
+            gui_refuse_filetransfer = 4                  " Incorrect front end or error on front end
+            invalid_type            = 5                  " Incorrect parameter FILETYPE
+            no_authority            = 6                  " No upload authorization
+            unknown_error           = 7                  " Unknown error
+            bad_data_format         = 8                  " Cannot Interpret Data in File
+            header_not_allowed      = 9                  " Invalid header
+            separator_not_allowed   = 10                 " Invalid separator
+            header_too_long         = 11                 " Header information currently restricted to 1023 bytes
+            unknown_dp_error        = 12                 " Error when calling data provider
+            access_denied           = 13                 " Access to File Denied
+            dp_out_of_memory        = 14                 " Not enough memory in data provider
+            disk_full               = 15                 " Storage medium is full.
+            dp_timeout              = 16                 " Data provider timeout
+            not_supported_by_gui    = 17                 " GUI does not support this
+            error_no_gui            = 18                 " GUI not available
+            others                  = 19 ).
+        if sy-subrc <> 0.
+          message id sy-msgid type sy-msgty number sy-msgno
+                 with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
+          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+        endif.
+      when gc_path_sep-unix.
+* ---- check the authority to read the file from the application server ---- *
+        data(lv_program) = conv authb-program( sy-cprog ).
+        data(lv_auth_filename) = conv authb-filename( lv_filepath ).
+        call function 'AUTHORITY_CHECK_DATASET'
+          exporting
+            program          = lv_program  " ABAP program in which access occurs
+            activity         = sabc_act_read " Access Type (See Function Documentation)
+            filename         = lv_auth_filename " File name
+          exceptions
+            no_authority     = 1        " You are not authorized for this access
+            activity_unknown = 2        " Access type unknown
+            others           = 3.
+        if sy-subrc <> 0.
+          case sy-subrc.
+            when 1.
+              lv_msg = 'Not authorised to write the file to app server'.
+            when others.
+              lv_msg = 'File open error'.
+          endcase.
+          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+        endif.
+
+        if not check_file_exists( exporting iv_filepath = lv_filepath ).
+          lv_msg = 'App server file path does not exist'.
+          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+        endif.
+
+* ---- validate physical filename against logical filename ---- *
+        call function 'FILE_VALIDATE_NAME'
+          exporting
+            logical_filename           = lc_logical_filename
+          changing
+            physical_filename          = lv_filepath
+          exceptions
+            logical_filename_not_found = 1
+            validation_failed          = 2
+            others                     = 3.
+        if sy-subrc <> 0.
+          message id sy-msgid type sy-msgty number sy-msgno
+            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
+          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+        endif.
+
+        try.
+            " open the dataset for reading
+            open dataset lv_filepath for input in binary mode.
+            if sy-subrc = 0.
+              try.
+                  do.
+                    clear ls_data.
+                    read dataset lv_filepath into ls_data length data(lv_len).
+                    if sy-subrc <> 0.
+                      if lv_len > 0.
+                        ev_file_length = ev_file_length + lv_len.
+                        append ls_data to rt_data.
+                      endif.
+                      exit.
+                    endif.
+                    ev_file_length = ev_file_length + lv_len.
+                    append ls_data to rt_data.
+                  enddo.
+                  try.
+                      " close the dataset after reading
+                      close dataset lv_filepath.
+                    catch cx_sy_file_close into data(lox_file_close).
+                      lv_msg = lox_file_close->get_text( ).
+                      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                  endtry.
+                catch cx_sy_file_io into data(lox_file_io).
+                  lv_msg = lox_file_io->get_text( ).
+                  raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                catch cx_sy_file_open_mode into data(lox_file_open_mode).
+                  lv_msg = lox_file_open_mode->get_text( ).
+                  raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+              endtry.
+            else.
+              lv_msg = 'File open error'.
+              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+            endif.
+          catch cx_sy_file_authority into data(lox_file_authority).
+            lv_msg = lox_file_authority->get_text( ).
+            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+          catch cx_sy_file_open into data(lox_file_open).
+            lv_msg = lox_file_open->get_text( ).
+            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+          catch cx_sy_too_many_files into data(lox_too_many_files).
+            lv_msg = lox_too_many_files->get_text( ).
+            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+        endtry.
+      when others.
+    endcase.
   endmethod.
 
 
@@ -3125,7 +3123,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
   endmethod.
 
 
-  method write_file_to_app_server.
+  method write_file_to_path.
 
     constants: lc_msg_id           type syst-msgid value '00',
                lc_msg_no           type syst-msgno value '001',
@@ -3134,261 +3132,256 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
     clear rv_uploaded.
 
-    data(lv_frontend_filepath) = iv_frontend_filepath.
+    data(lv_filepath) = iv_filepath.
+    data(lt_data) = it_data.
+    data(lv_overwrite) = iv_overwrite.
+    data(lv_file_length) = iv_file_length.
+    data(lo_helper) = new lcl_helper( ).
 
 * ---- input parameter validation ---- *
-    if lv_frontend_filepath is initial and ct_data is initial.
-      data(lv_msg) = conv bapi_msg( 'Please supply atleast one data source.' ).
+    if lv_filepath is initial or lt_data is initial.
+      data(lv_msg) = conv bapi_msg( 'Mandatory input missing: Filepath/Binary data' ).
       raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
     endif.
 
-    if lv_frontend_filepath is not initial and ct_data is not initial.
-      lv_msg = 'Please supply only one data source.'.
-      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    endif.
-
-    if ct_data is not initial and iv_file_length is initial.
+    if lt_data is not initial and lv_file_length is initial.
       lv_msg = 'Please supply length of binary data for accurate conversion'.
       raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
     endif.
 
+* ---- Compute filepath type ---- *
+    data(lv_file_path_type) = cond #( when lv_filepath ca gc_path_sep-windows then gc_path_sep-windows
+                                      when lv_filepath ca gc_path_sep-unix then gc_path_sep-unix ).
+
+    " Note on .bin : => file extension does not matter. The data is stored in binary format anyways...
+    " ...and can be directly converted to target extension while reading/downoading
+    case lv_file_path_type.
+      when gc_path_sep-windows.
+        if sy-batch = abap_true.
+          lv_msg = 'GUI not available in background mode'.
+          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+        endif.
+        if strlen( lv_filepath ) = 1 and lv_filepath = gc_path_sep-windows. " indicator that the default filepath is to be used
+          if lo_helper is bound.
+            lv_filepath = |{ lo_helper->get_temp_file_path( ) }{ gc_path_sep-windows }| &&
+                          |{ sy-cprog }_{ sy-datum date = user }_{ sy-uzeit time = user }.bin|.
+          endif.
+        endif.
+        if lv_filepath is not initial.
+          " to-do: validate filename/path
+          cl_gui_frontend_services=>gui_download(
+              exporting
+                bin_filesize              = cond #( when lv_file_length is not initial then lv_file_length )
+                filename                  = lv_filepath
+                filetype                  = lc_binary
+                confirm_overwrite         = lv_overwrite
+              importing
+                filelength                = data(lv_bytes_transferred)
+              changing
+                data_tab                  = lt_data
+              exceptions
+                file_write_error          = 1
+                no_batch                  = 2
+                gui_refuse_filetransfer   = 3
+                invalid_type              = 4
+                no_authority              = 5
+                unknown_error             = 6
+                header_not_allowed        = 7
+                separator_not_allowed     = 8
+                filesize_not_allowed      = 9
+                header_too_long           = 10
+                dp_error_create           = 11
+                dp_error_send             = 12
+                dp_error_write            = 13
+                unknown_dp_error          = 14
+                access_denied             = 15
+                dp_out_of_memory          = 16
+                disk_full                 = 17
+                dp_timeout                = 18
+                file_not_found            = 19
+                dataprovider_exception    = 20
+                control_flush_error       = 21
+                not_supported_by_gui      = 22
+                error_no_gui              = 23
+                others                    = 24 ).
+          if sy-subrc <> 0.
+            message id sy-msgid type sy-msgty number sy-msgno
+                       with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
+            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+          else.
+            message |{ lv_bytes_transferred } bytes transferred to { lv_filepath }| type 'S'.
+            " verify data upload...
+            rv_uploaded = check_file_exists( iv_filepath = lv_filepath ).
+          endif.
+        endif.
+      when gc_path_sep-unix.
 * ---- set default app server filepath if not supplied ---- *
-    if cv_app_server_filepath is initial.
-*      lv_msg = 'Please supply app server path to write to.'.
-*      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-      data(lv_dir_path) = value dirname_al11( ).
-      data(lv_program) = conv authb-program( sy-cprog ).
-      data(lv_function) = conv authb-cfuncname( 'C_SAPGPARAM' ).
+        if strlen( lv_filepath ) = 1 and lv_filepath = gc_path_sep-unix. " indicator that the default filepath is to be used
 
-      " check authority before calling C function to avoid runtime error
-      call function 'AUTHORITY_CHECK_C_FUNCTION'
-        exporting
-          program          = lv_program
-          activity         = sabc_act_call
-          function         = lv_function
-        exceptions
-          no_authority     = 1
-          activity_unknown = 2
-          others           = 3.
-      if sy-subrc <> 0.
-        message id sy-msgid type sy-msgty number sy-msgno
-          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
-        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-      endif.
+          data(lv_dir_path) = value dirname_al11( ).
+          data(lv_program)  = conv authb-program( sy-cprog ).
+          data(lv_function) = conv authb-cfuncname( 'C_SAPGPARAM' ).
 
-      " C function call to retrieve app server path using paramter(alias)
-      call 'C_SAPGPARAM' id 'NAME'  field 'DIR_TRANS'
-                         id 'VALUE' field lv_dir_path.
+          " check authority before calling C function to avoid runtime error
+          call function 'AUTHORITY_CHECK_C_FUNCTION'
+            exporting
+              program          = lv_program
+              activity         = sabc_act_call
+              function         = lv_function
+            exceptions
+              no_authority     = 1
+              activity_unknown = 2
+              others           = 3.
+          if sy-subrc <> 0.
+            message id sy-msgid type sy-msgty number sy-msgno
+              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
+            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+          endif.
 
-      " set default filename same as frontend filename if not supplied
-      if lv_frontend_filepath is not initial.
-        try.
-            data(lv_filename) = cl_fs_path=>create(
-                                  exporting
-                                    name = lv_frontend_filepath
-                                    path_kind = cl_fs_path=>path_kind_windows )->get_file_name( ).
-          catch cx_smart_path_syntax into data(lox_smart_path_syntax).
-        endtry.
-      else.
-        " if frontend filepath is not supplied...in case of direct ct_data input
-        " note on .bin => file extension does not matter. The data is stored in binary format anyways...
-        " ...and can be directly converted to target extension while reading/downoading
-        lv_filename = |{ sy-cprog }_{ sy-datum date = user }_{ sy-uzeit time = user }.bin|.
-      endif.
-      cv_app_server_filepath = |{ lv_dir_path }/{ lv_filename }|.
-    endif.
+          " C function call to retrieve app server path using paramter(alias)
+          call 'C_SAPGPARAM' id 'NAME'  field 'DIR_TRANS'
+                             id 'VALUE' field lv_dir_path.
 
+          lv_filepath = |{ lv_dir_path }{ gc_path_sep-unix }| &&
+                        |{ sy-cprog }_{ sy-datum date = user }_{ sy-uzeit time = user }.bin|.
+        endif.
+
+        if lv_filepath is not initial.
 * ---- check the authority to write the file to the application server ---- *
 *    if iv_with_auth_check = abap_true.
-    data(lv_auth_filename) = conv authb-filename( cv_app_server_filepath ).
-    call function 'AUTHORITY_CHECK_DATASET'
-      exporting
-        program          = lv_program  " ABAP program in which access occurs
-        activity         = sabc_act_write " Access Type (See Function Documentation)
-        filename         = lv_auth_filename " File name
-      exceptions
-        no_authority     = 1        " You are not authorized for this access
-        activity_unknown = 2        " Access type unknown
-        others           = 3.
-    if sy-subrc <> 0.
-      case sy-subrc.
-        when 1.
-          lv_msg = 'Not authorised to write the file to app server'.
-        when others.
-          lv_msg = 'File open error'.
-      endcase.
-      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    endif.
+          data(lv_auth_filename) = conv authb-filename( lv_filepath ).
+          call function 'AUTHORITY_CHECK_DATASET'
+            exporting
+              program          = lv_program  " ABAP program in which access occurs
+              activity         = sabc_act_write " Access Type (See Function Documentation)
+              filename         = lv_auth_filename " File name
+            exceptions
+              no_authority     = 1        " You are not authorized for this access
+              activity_unknown = 2        " Access type unknown
+              others           = 3.
+          if sy-subrc <> 0.
+            case sy-subrc.
+              when 1.
+                lv_msg = 'Not authorised to write the file to app server'.
+              when others.
+                lv_msg = 'File open error'.
+            endcase.
+            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+          endif.
 *    endif.
 
 * ---- validate physical filename against logical filename ---- *
-    call function 'FILE_VALIDATE_NAME'
-      exporting
-        logical_filename           = lc_logical_filename
-      changing
-        physical_filename          = cv_app_server_filepath
-      exceptions
-        logical_filename_not_found = 1
-        validation_failed          = 2
-        others                     = 3.
-    if sy-subrc <> 0.
-      message id sy-msgid type sy-msgty number sy-msgno
-        with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
-      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    endif.
-
-* ---- handle overwriting ---- *
-    if iv_overwrite = abap_false
-      and check_file_exists( exporting iv_filepath = cv_app_server_filepath ). " generic file existence check, works for both frontend and app server
-      lv_msg = 'File already exists on app server.'.  " overwriting not requested
-      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    elseif iv_overwrite = abap_true
-      and check_file_exists( exporting iv_filepath = cv_app_server_filepath ).
-      try.
-          delete dataset cv_app_server_filepath.  " overwriting requested, so delete the file first if it exists
-          " alternative "open dataset dset for appending..."
-        catch cx_sy_file_authority into data(lox_file_authority).
-          lv_msg = lox_file_authority->get_text( ).
-          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-        catch cx_sy_file_open into data(lox_file_open).
-          lv_msg = lox_file_open->get_text( ).
-          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-      endtry.
-    endif.
-
-* ---- load frontend binary file, with filesize ---- *
-    if iv_frontend_filepath is not initial.
-      if check_file_exists( iv_filepath = lv_frontend_filepath ). " generic file existence check, works for both frontend and app server
-        data: lv_file_length type i,
-              lt_data        type table of rcgrepfile.
-
-        clear:
-          lv_file_length,
-          lt_data.
-
-        cl_gui_frontend_services=>gui_upload(
-          exporting
-            filename                = lv_frontend_filepath    " Name of file
-            filetype                = lc_binary               " File Type (ASCII, Binary)
-          importing
-            filelength              = lv_file_length          " File Length
-          changing
-            data_tab                = ct_data                 " Transfer table for file contents
-          exceptions
-            file_open_error         = 1                  " File does not exist and cannot be opened
-            file_read_error         = 2                  " Error when reading file
-            no_batch                = 3                  " Cannot execute front-end function in background
-            gui_refuse_filetransfer = 4                  " Incorrect front end or error on front end
-            invalid_type            = 5                  " Incorrect parameter FILETYPE
-            no_authority            = 6                  " No upload authorization
-            unknown_error           = 7                  " Unknown error
-            bad_data_format         = 8                  " Cannot Interpret Data in File
-            header_not_allowed      = 9                  " Invalid header
-            separator_not_allowed   = 10                 " Invalid separator
-            header_too_long         = 11                 " Header information currently restricted to 1023 bytes
-            unknown_dp_error        = 12                 " Error when calling data provider
-            access_denied           = 13                 " Access to File Denied
-            dp_out_of_memory        = 14                 " Not enough memory in data provider
-            disk_full               = 15                 " Storage medium is full.
-            dp_timeout              = 16                 " Data provider timeout
-            not_supported_by_gui    = 17                 " GUI does not support this
-            error_no_gui            = 18                 " GUI not available
-            others                  = 19 ).
-        if sy-subrc <> 0.
-          message id sy-msgid type sy-msgty number sy-msgno
-            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
-          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-        endif.
-      else.
-        lv_msg = 'Frontend file does not exist'.
-        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-      endif.
-    endif.
-
-* ---- at this point ct_data(binary data - solix tab) must be filled; either from frontend or direct input
-    if ct_data is not initial.
-      try.
-          " open the dataset for writing
-          open dataset cv_app_server_filepath for output in binary mode.
-          if sy-subrc = 0.
-            try.
-                " lines and file length are required for exact calculation of size of last line of data
-                data(lv_lines) = lines( ct_data ).
-
-                " in case of direct ct_data input, file length is supplied by user since...
-                " ...it's not possible to calculate exact binary file size from ct_data alone
-                if iv_file_length is not initial and lv_file_length is initial.
-                  lv_file_length = iv_file_length.
-                endif.
-
-                " last resort...
-                if lv_file_length is initial.
-                  lv_file_length = xstrlen( cl_bcs_convert=>solix_to_xstring(
-                                             exporting
-                                               it_solix = ct_data ) ).
-                endif.
-
-                loop at ct_data assigning field-symbol(<ls_data>).
-                  " this part....
-                  " ...is required since the size of data in the last line may be less than 255 bytes
-                  " If we do not pass the exact binary length, some non-existant empty data is pushed...
-                  " ...which renders the file unreadable/uncompatible
-                  data(lv_max_len) = xstrlen( <ls_data>-line ). " max length of each line
-                  if lv_lines gt 1.
-                    if sy-tabix = lv_lines. " calculate length of last line...
-                      data(lv_len) = lv_file_length - ( lv_max_len * ( lv_lines - 1 ) ).
-                      " last line size = total file size - totat length of previous lines
-                    else.
-                      lv_len = lv_max_len.  " all other lines = max line length
-                    endif.
-                  else.
-                    lv_len = lv_file_length.  " lines = 1 means entire filedata is one line
-                  endif.
-                  " end of this part
-                  " write binary data to dataset line by line
-                  transfer <ls_data>-line to cv_app_server_filepath length lv_len.  " pass exact length of data to be transfered
-                  clear lv_len.
-                endloop.
-
-                try.
-                    " close the dataset after writing
-                    close dataset cv_app_server_filepath.
-
-                    " verify data upload...
-                    rv_uploaded = check_file_exists( iv_filepath = cv_app_server_filepath ).
-                  catch cx_sy_file_close into data(lox_file_close).
-                    lv_msg = lox_file_close->get_text( ).
-                    raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-                endtry.
-              catch cx_sy_file_io into data(lox_file_io).
-                lv_msg = lox_file_io->get_text( ).
-                raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-              catch cx_sy_file_open_mode into data(lox_file_open_mode).
-                lv_msg = lox_file_open_mode->get_text( ).
-                raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-              catch cx_sy_file_access_error into data(lox_file_access_error).
-                lv_msg = lox_file_access_error->get_text( ).
-                raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-            endtry.
-          else.
-            lv_msg = 'File open error'.
+          call function 'FILE_VALIDATE_NAME'
+            exporting
+              logical_filename           = lc_logical_filename
+            changing
+              physical_filename          = lv_filepath
+            exceptions
+              logical_filename_not_found = 1
+              validation_failed          = 2
+              others                     = 3.
+          if sy-subrc <> 0.
+            message id sy-msgid type sy-msgty number sy-msgno
+              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
             raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
           endif.
-        catch cx_sy_file_authority into lox_file_authority.
-          lv_msg = lox_file_authority->get_text( ).
-          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-        catch cx_sy_file_open into lox_file_open.
-          lv_msg = lox_file_open->get_text( ).
-          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-        catch cx_sy_too_many_files into data(lox_too_many_files).
-          lv_msg = lox_too_many_files->get_text( ).
-          raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-      endtry.
-    else.
-      lv_msg = 'No data loaded/supplied'.
-      raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-    endif.
 
+* ---- handle overwriting ---- *
+          if lv_overwrite = abap_false
+            and check_file_exists( exporting iv_filepath = lv_filepath ). " generic file existence check, works for both frontend and app server
+            lv_msg = 'File already exists on app server.'.  " overwriting not requested
+            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+          elseif lv_overwrite = abap_true
+            and check_file_exists( exporting iv_filepath = lv_filepath ).
+            try.
+                delete dataset lv_filepath.  " overwriting requested, so delete the file first if it exists
+                " alternative "open dataset dset for appending..."
+              catch cx_sy_file_authority into data(lox_file_authority).
+                lv_msg = lox_file_authority->get_text( ).
+                raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+              catch cx_sy_file_open into data(lox_file_open).
+                lv_msg = lox_file_open->get_text( ).
+                raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+            endtry.
+          endif.
+
+          try.
+              " open the dataset for writing
+              open dataset lv_filepath for output in binary mode.
+              if sy-subrc = 0.
+                try.
+                    " lines and file length are required for exact calculation of size of last line of data
+                    data(lv_lines) = lines( lt_data ).
+
+                    " In case of direct ct_data input, file length is supplied by user since...
+                    " ...it's not possible to calculate exact binary file size from lt_data alone
+                    " But if its not supplied last resort is to compute length using binary tab...
+                    if lv_file_length is initial.
+                      lv_file_length = xstrlen( cl_bcs_convert=>solix_to_xstring(
+                                                 exporting
+                                                   it_solix = lt_data ) ).
+                    endif.
+
+                    loop at lt_data assigning field-symbol(<ls_data>).
+                      " this part....
+                      " ...is required since the size of data in the last line may be less than 255 bytes
+                      " If we do not pass the exact binary length, some non-existant empty data is pushed...
+                      " ...which renders the file unreadable/uncompatible
+                      data(lv_max_len) = xstrlen( <ls_data>-line ). " max length of each line
+                      if lv_lines gt 1.
+                        if sy-tabix = lv_lines. " calculate length of last line...
+                          data(lv_len) = lv_file_length - ( lv_max_len * ( lv_lines - 1 ) ).
+                          " last line size = total file size - totat length of previous lines
+                        else.
+                          lv_len = lv_max_len.  " all other lines = max line length
+                        endif.
+                      else.
+                        lv_len = lv_file_length.  " lines = 1 means entire filedata is one line
+                      endif.
+                      " end of this part
+                      " write binary data to dataset line by line
+                      transfer <ls_data>-line to lv_filepath length lv_len.  " pass exact length of data to be transfered
+                      clear lv_len.
+                    endloop.
+
+                    try.
+                        " close the dataset after writing
+                        close dataset lv_filepath.
+
+                        " verify data upload...
+                        rv_uploaded = check_file_exists( iv_filepath = lv_filepath ).
+                      catch cx_sy_file_close into data(lox_file_close).
+                        lv_msg = lox_file_close->get_text( ).
+                        raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                    endtry.
+                  catch cx_sy_file_io into data(lox_file_io).
+                    lv_msg = lox_file_io->get_text( ).
+                    raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                  catch cx_sy_file_open_mode into data(lox_file_open_mode).
+                    lv_msg = lox_file_open_mode->get_text( ).
+                    raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                  catch cx_sy_file_access_error into data(lox_file_access_error).
+                    lv_msg = lox_file_access_error->get_text( ).
+                    raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+                endtry.
+              else.
+                lv_msg = 'File open error'.
+                raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+              endif.
+            catch cx_sy_file_authority into lox_file_authority.
+              lv_msg = lox_file_authority->get_text( ).
+              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+            catch cx_sy_file_open into lox_file_open.
+              lv_msg = lox_file_open->get_text( ).
+              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+            catch cx_sy_too_many_files into data(lox_too_many_files).
+              lv_msg = lox_too_many_files->get_text( ).
+              raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+          endtry.
+
+        endif.
+      when others.
+    endcase.
   endmethod.
 
 

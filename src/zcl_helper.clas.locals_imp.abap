@@ -412,17 +412,32 @@ class lcl_helper implementation.
 
             try.
                 data(lv_temp_file) = get_temp_file_path( ).
+                data(lv_file_length) = value i( ).
+                data(lt_data_bin) = zcl_helper=>read_file_from_path(
+                                      exporting
+                                        iv_filepath     = conv #( iv_filename ) " File path on app server(AL11)
+                                      importing
+                                        ev_file_length  = lv_file_length ).
 
-                zcl_helper=>read_file_from_app_server(
-                  exporting
-                    iv_app_server_filepath  = conv #( iv_filename ) " File path on app server(AL11)
-                    iv_frontend_filepath    = conv #( lv_temp_file ) ).
+                if lt_data_bin is not initial and lv_file_length is not initial.
+                  try.
+                      data(lv_uploaded) = zcl_helper=>write_file_to_path(
+                                            exporting
+                                              iv_filepath    = lv_temp_file     " Path of file to write to on frontend or app server
+                                              iv_overwrite   = abap_true        " Overwrite file if already exists
+                                              iv_file_length = lv_file_length   " Size of binary data
+                                              it_data        = lt_data_bin ).   " Binary Data
+                    catch zcx_generic into data(lox_generic). " Generic Exception Class
+                      message lox_generic type 'S' display like 'E'.
+                      return.
+                  endtry.
+                endif.
 
                 if zcl_helper=>check_file_exists( exporting iv_filepath = lv_temp_file ).
                   lo_imp_excel->set_file( exporting iv_file = conv #( lv_temp_file ) ).
                 endif.
 
-              catch zcx_generic into data(lox_generic). " Generic Exception Class
+              catch zcx_generic into lox_generic. " Generic Exception Class
                 message lox_generic type 'S' display like 'E'.
                 return.
             endtry.
@@ -498,11 +513,11 @@ class lcl_helper implementation.
 
               try.
                   data(lv_file_size) = value i( ).
-                  data(lt_data) = zcl_helper=>read_file_from_app_server(
+                  data(lt_data) = zcl_helper=>read_file_from_path(
                                     exporting
-                                      iv_app_server_filepath = iv_filename " File path on app server(AL11)
+                                      iv_filepath     = iv_filename " File path on app server(AL11)
                                     importing
-                                      ev_file_length         = lv_file_size ).         " Binary file length
+                                      ev_file_length  = lv_file_size ).         " Binary file length
 
                   if lt_data is not initial.
                     lv_data_xstr = cl_bcs_convert=>solix_to_xstring(
@@ -1138,45 +1153,23 @@ class lcl_helper implementation.
 
             if lv_temp_file is not initial and zcl_helper=>check_file_exists( exporting iv_filepath = lv_temp_file ).
               data(lv_file_length) = value i( ).
-              cl_gui_frontend_services=>gui_upload(
-                exporting
-                  filename                = lv_temp_file       " Name of file
-                  filetype                = lc_binary          " File Type (ASCII, Binary)
-                importing
-                  filelength              = lv_file_length     " File Length
-                changing
-                  data_tab                = lt_data            " Transfer table for file contents
-                exceptions
-                  file_open_error         = 1                  " File does not exist and cannot be opened
-                  file_read_error         = 2                  " Error when reading file
-                  no_batch                = 3                  " Cannot execute front-end function in background
-                  gui_refuse_filetransfer = 4                  " Incorrect front end or error on front end
-                  invalid_type            = 5                  " Incorrect parameter FILETYPE
-                  no_authority            = 6                  " No upload authorization
-                  unknown_error           = 7                  " Unknown error
-                  bad_data_format         = 8                  " Cannot Interpret Data in File
-                  header_not_allowed      = 9                  " Invalid header
-                  separator_not_allowed   = 10                 " Invalid separator
-                  header_too_long         = 11                 " Header information currently restricted to 1023 bytes
-                  unknown_dp_error        = 12                 " Error when calling data provider
-                  access_denied           = 13                 " Access to File Denied
-                  dp_out_of_memory        = 14                 " Not enough memory in data provider
-                  disk_full               = 15                 " Storage medium is full.
-                  dp_timeout              = 16                 " Data provider timeout
-                  not_supported_by_gui    = 17                 " GUI does not support this
-                  error_no_gui            = 18                 " GUI not available
-                  others                  = 19 ).
-              if sy-subrc <> 0.
-                message id sy-msgid type sy-msgty number sy-msgno
-                  with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_dummy.
-              else.
-                if lt_data is not initial.
-                  rv_data = cl_bcs_convert=>solix_to_xstring(
-                                              exporting
-                                                it_solix = lt_data
-                                                iv_size  = lv_file_length ).
-                endif.
-              endif.
+              try.
+                  lt_data = zcl_helper=>read_file_from_path(
+                              exporting
+                                iv_filepath    = lv_temp_file    " File path on frontend/app server
+                              importing
+                                ev_file_length = lv_file_length ). " Binary file length
+
+                  if lt_data is not initial.
+                    rv_data = cl_bcs_convert=>solix_to_xstring(
+                                                exporting
+                                                  it_solix = lt_data
+                                                  iv_size  = lv_file_length ).
+                  endif.
+                catch zcx_generic into data(lox_generic). " Generic Exception Class
+                  message lox_generic type 'S' display like 'E'.
+                  return.
+              endtry.
             endif.
           endif.
 

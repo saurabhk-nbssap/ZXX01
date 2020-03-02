@@ -77,7 +77,7 @@
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
-     <CMPNAME>DELETE_FILE_FROM_APP_SERVER</CMPNAME>
+     <CMPNAME>DELETE_FILE</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Delete specified file from app server</DESCRIPT>
     </SEOCOMPOTX>
@@ -185,9 +185,9 @@
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
-     <CMPNAME>READ_FILE_FROM_APP_SERVER</CMPNAME>
+     <CMPNAME>READ_FILE_FROM_PATH</CMPNAME>
      <LANGU>E</LANGU>
-     <DESCRIPT>Read file from to app server path =&gt; download or xstring tab</DESCRIPT>
+     <DESCRIPT>Read binary file/data from frontend or app server path</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
@@ -200,12 +200,6 @@
      <CMPNAME>UPDATE_REPORT_VARIANTS_DB</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Update von DB-Tabelle LTDX, LTDXT, LTDXD ggf LTDXS</DESCRIPT>
-    </SEOCOMPOTX>
-    <SEOCOMPOTX>
-     <CLSNAME>ZCL_HELPER</CLSNAME>
-     <CMPNAME>WRITE_FILE_TO_APP_SERVER</CMPNAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>Write binary data to file path on frontend or app server</DESCRIPT>
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
