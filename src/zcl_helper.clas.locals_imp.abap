@@ -139,8 +139,12 @@ class lcl_helper definition final.
 
       " required for xls to binary conversion and vice verca
       get_temp_file_path
+        importing
+          value(iv_front_end)  type abap_bool optional
+          value(iv_app_server) type abap_bool optional
+          value(iv_extension)  type clike     optional
         returning
-          value(rv_temp_file) type string,
+          value(rv_temp_file)  type string,
 
       delete_temp_file
         importing
@@ -418,7 +422,10 @@ class lcl_helper implementation.
                 i_output_immediately = abap_true ).                           " X = Display Progress Immediately
 
             try.
-                data(lv_temp_file) = get_temp_file_path( ).
+                data(lv_temp_file) = get_temp_file_path(
+                                       exporting
+                                         iv_front_end = abap_true
+                                         iv_extension = zcl_helper=>gc_extension-xls ).
                 data(lv_file_length) = value i( ).
                 data(lt_data_bin) = zcl_helper=>read_file_from_path(
                                       exporting
@@ -564,8 +571,10 @@ class lcl_helper implementation.
                           data(ls_sheet_info_swap) = <ls_sheet_info_top>.
                           assign lt_sheet_info[ lines( lt_sheet_info ) - ( sy-index - 1 )  ] to field-symbol(<ls_sheet_info_bot>).
                           if <ls_sheet_info_bot> is assigned.
-                            <ls_sheet_info_top> = corresponding #( base ( <ls_sheet_info_top> ) <ls_sheet_info_bot> except name ).
-                            <ls_sheet_info_bot> = corresponding #( base ( <ls_sheet_info_bot> ) ls_sheet_info_swap except name ).
+                            if <ls_sheet_info_top> <> <ls_sheet_info_bot>.  " prevents corresponding_self dump
+                              <ls_sheet_info_top> = corresponding #( base ( <ls_sheet_info_top> ) <ls_sheet_info_bot> except name ).
+                              <ls_sheet_info_bot> = corresponding #( base ( <ls_sheet_info_bot> ) ls_sheet_info_swap except name ).
+                            endif.
                           endif.
                         endif.
                       catch cx_sy_itab_line_not_found.
@@ -659,7 +668,7 @@ class lcl_helper implementation.
 
   method itab_to_excel_ehfnd.
     constants: lc_sheet_name type string value 'SAP_DATA'.
-    field-symbols: <lt_data> type standard table.
+    field-symbols: <lt_data> type any table.
     clear rv_data.
     if it_multi_sheet_data is not initial.
       data(lo_xlsx) = cl_ehfnd_xlsx=>get_instance( ).
@@ -692,18 +701,18 @@ class lcl_helper implementation.
                         if lo_table is bound.
                           data(lo_struct) = cast cl_abap_structdescr( lo_table->get_table_line_type( ) ).
                           if lo_struct is bound.
-                            data(lt_comp) = lo_struct->get_components( ).
-                            if line_exists( lt_comp[ as_include = abap_true ] ).
-                              loop at lt_comp into data(ls_comp) where as_include = abap_true.
-                                try.
-                                    lo_struct ?= ls_comp-type.
-                                    append lines of lo_struct->get_components( ) to lt_comp.
-                                  catch cx_sy_move_cast_error ##no_handler.
-                                endtry.
-                                clear ls_comp.
-                              endloop.
-                              delete lt_comp where as_include = abap_true.
-                            endif.
+                            data(lt_comp) = lo_struct->components.
+*                            if line_exists( lt_comp[ as_include = abap_true ] ).
+*                              loop at lt_comp into data(ls_comp) where as_include = abap_true.
+*                                try.
+*                                    lo_struct ?= ls_comp-type.
+*                                    append lines of lo_struct->components to lt_comp.
+*                                  catch cx_sy_move_cast_error ##no_handler.
+*                                endtry.
+*                                clear ls_comp.
+*                              endloop.
+*                              delete lt_comp where as_include = abap_true.
+*                            endif.
                           endif.
 
                           if lt_fields is not initial.
@@ -808,7 +817,8 @@ class lcl_helper implementation.
   endmethod.
 
   method sheet_to_itab.
-    field-symbols: <lt_data> type standard table.
+    data: lr_data type ref to data.
+    field-symbols: <lt_data> type any table.
 
     unassign <lt_data>.
     clear rr_data.
@@ -820,9 +830,12 @@ class lcl_helper implementation.
       if rr_data is bound.
         assign rr_data->* to <lt_data>.
         if <lt_data> is assigned.
+          create data lr_data like line of <lt_data>.
           loop at it_sheet into data(ls_sheet) where row gt 1.  " exclude header row
             at new row.
-              append initial line to <lt_data> assigning field-symbol(<ls_data>).
+              if lr_data is bound.
+                assign lr_data->* to field-symbol(<ls_data>).
+              endif.
               if <ls_data> is assigned.
                 clear <ls_data>.
               endif.
@@ -833,6 +846,11 @@ class lcl_helper implementation.
             endif.
             clear ls_sheet.
             unassign <lv>.
+
+            at end of row.
+              insert <ls_data> into table <lt_data>.
+              unassign <ls_data>.
+            endat.
           endloop.
         endif.
       endif.
@@ -874,10 +892,9 @@ class lcl_helper implementation.
                lc_range_header  type c length 50 value 'RANGE_HEADER',
                lc_range_data    type c length 50 value 'RANGE_DATA',
                lc_string_format type c length 1 value '@',
-               lc_sheet_name    type string value 'SAP_DATA',
-               lc_binary        type c length 10 value 'BIN'.
+               lc_sheet_name    type string value 'SAP_DATA'.
 
-    field-symbols: <lt_data> type standard table.
+    field-symbols: <lt_data> type any table.
 
     data(lt_data) = value solix_tab( ).
 
@@ -894,6 +911,7 @@ class lcl_helper implementation.
           inplace_enabled          = abap_true
           r3_application_name      = lc_app_name                                  " Application Name
           parent                   = cl_gui_custom_container=>default_screen      " Parent Container
+*          no_flush                 = abap_true                                    " Do not flush automation queue (yet!)
         importing
           error                    = lo_error                                     " Error Object
           retcode                  = lv_retcode                                   " Error Value: Obsolete
@@ -910,6 +928,7 @@ class lcl_helper implementation.
         lo_container_control->get_document_proxy(
           exporting
             document_type      = soi_doctype_excel_sheet
+*            no_flush           = abap_true                          " Do not flush automation queue (yet!)
           importing
             document_proxy     = data(lo_document_proxy)
             error              = lo_error
@@ -920,12 +939,15 @@ class lcl_helper implementation.
             exporting
               document_title   = lc_doc_title
               open_inplace     = abap_true
+*              no_flush         = abap_true                          " Do not flush automation queue (yet!)
             importing
               error            = lo_error
               retcode          = lv_retcode ).
 
           if lv_retcode = c_oi_errors=>ret_ok.
             lo_document_proxy->has_spreadsheet_interface(
+*              exporting
+*                no_flush     = abap_true                " Do not flush automation queue (yet!)
               importing
                 error        = lo_error                 " Error?
                 is_available = data(lv_is_available)    " Is Interface Available
@@ -934,6 +956,8 @@ class lcl_helper implementation.
 
           if lv_is_available = 1.
             lo_document_proxy->get_spreadsheet_interface(
+*              exporting
+*                no_flush        = abap_true                 " Do not flush automation queue (yet!)
               importing
                 error           = lo_error                  " Error?
                 sheet_interface = data(lo_sheet_interface)  " Reference to Spreadsheet Interface
@@ -953,6 +977,7 @@ class lcl_helper implementation.
                     name     = condense( cond char100( when ls_sheet-name is not initial
                                                        then ls_sheet-name
                                                        else |{ lc_sheet_name }{ sy-tabix }| ) )    " Name of Worksheet
+*                    no_flush = abap_true      " Do not flush automation queue (yet!)
                   importing
                     error    = lo_error       " Error?
                     retcode  = lv_retcode ).  " Text of Error
@@ -967,14 +992,14 @@ class lcl_helper implementation.
                                                     p_data = <lt_data> ) )->get_table_line_type( ) ).
 
                     data(lt_components) = cond #( when lo_struct_descr is bound
-                                                  then lo_struct_descr->get_components( ) ).
+                                                  then lo_struct_descr->components ).
 
-                    loop at lt_components into data(ls_component) where as_include = abap_true.
-                      append lines of cast cl_abap_structdescr( ls_component-type )->get_components( ) to lt_components.
-                      clear ls_component.
-                    endloop.
-
-                    delete lt_components where as_include = abap_true.
+*                    loop at lt_components into data(ls_component) where as_include = abap_true.
+*                      append lines of cast cl_abap_structdescr( ls_component-type )->components to lt_components.
+*                      clear ls_component.
+*                    endloop.
+*
+*                    delete lt_components where as_include = abap_true.
 
                     if lt_fields is not initial.
                       loop at lt_fields assigning field-symbol(<ls_field>) where name is initial.
@@ -997,6 +1022,7 @@ class lcl_helper implementation.
                         top       = 1                   " Top Left-Hand Corner
                         rows      = 1                   " Rows
                         columns   = lv_columns          " Columns
+*                        no_flush  = abap_true           " Do not flush automation queue (yet!)
                       importing
                         error     = lo_error            " Errors?
                         retcode   = lv_retcode ).       " text
@@ -1005,6 +1031,7 @@ class lcl_helper implementation.
                       exporting
                         rangename    = lc_range_header    " Name of Range
                         formatstring = lc_string_format   " Format String
+*                        no_flush     = abap_true          " Do not flush automation queue (yet!)
                       importing
                         error        = lo_error           " Error?
                         retcode      = lv_retcode ).      " Text of Error
@@ -1023,6 +1050,7 @@ class lcl_helper implementation.
                       exporting
                         ranges    = lt_ranges       " Ranges in the Sheet
                         contents  = lt_content      " Contents of the Ranges
+*                        no_flush  = abap_true       " Do not flush automation queue (yet!)
                       importing
                         error     = lo_error        " Errors?
                         retcode   = lv_retcode ).   " Text of the Error
@@ -1032,6 +1060,7 @@ class lcl_helper implementation.
                         rangename = lc_range_header " Name of Range
                         front     = 2               " Foreground color
                         back      = 16              " Background color
+*                        no_flush  = abap_true       " Do not flush automation queue (yet!)
                       importing
                         error     = lo_error        " Error?
                         retcode   = lv_retcode ).   " Text of Error
@@ -1045,64 +1074,94 @@ class lcl_helper implementation.
 
                   lv_columns = cond #( when lv_columns is initial then lines( lt_fields_fcat ) else lv_columns ).
 
-                  lo_sheet_interface->insert_range_dim(
-                    exporting
-                      name      = lc_range_data     " Name of Range
-                      left      = 1                 " Top Left-Hand Corner
-                      top       = cond #( when lt_fields is not initial or ls_sheet-header = abap_true
-                                          then 2 else 1 )                 " Top Left-Hand Corner
-                      rows      = lv_rows           " Rows
-                      columns   = lv_columns        " Columns
-                    importing
-                      error     = lo_error          " Errors?
-                      retcode   = lv_retcode ).     " text
+                  constants: lc_max_rows type i value 9999.
 
-                  if ls_sheet-string = abap_true.
-                    lo_sheet_interface->set_format_string(
+                  data(lv_top)   = value i( ).
+                  data(lv_count) = conv i( round( val = ( lv_rows / lc_max_rows )
+                                                  dec = 0
+                                                  mode = cl_abap_math=>round_up ) ).
+                  data(lv_start) = 1.
+                  data(lv_end)   = 0.
+
+                  do lv_count times.
+
+                    lv_end = cond #( when ( lv_end + lc_max_rows ) <= lines( <lt_data> ) then ( lv_end + lc_max_rows ) else lines( <lt_data> ) ).
+
+                    lv_top = cond #( when lt_fields is not initial or ls_sheet-header = abap_true
+                                     then ( lv_start + 1 ) else lv_start ). " Top Left-Hand Corner
+
+                    lv_rows = ( lv_end - lv_start ) + 1.
+
+                    lo_sheet_interface->insert_range_dim(
                       exporting
-                        rangename    = lc_range_data      " Name of Range
-                        formatstring = lc_string_format   " Format String
+                        name      = lc_range_data     " Name of Range
+                        left      = 1                 " Top Left-Hand Corner
+                        top       = lv_top
+                        rows      = lv_rows           " Rows
+                        columns   = lv_columns        " Columns
+*                        no_flush  = abap_true         " Do not flush automation queue (yet!)
                       importing
-                        error        = lo_error           " Error?
-                        retcode      = lv_retcode ).      " Text of Error
-                  endif.
+                        error     = lo_error          " Errors?
+                        retcode   = lv_retcode ).     " text
 
-                  clear:
-                   lt_content,
-                   lt_ranges.
+                    if ls_sheet-string = abap_true.
+                      lo_sheet_interface->set_format_string(
+                        exporting
+                          rangename    = lc_range_data      " Name of Range
+                          formatstring = lc_string_format   " Format String
+*                          no_flush     = abap_true          " Do not flush automation queue (yet!)
+                        importing
+                          error        = lo_error           " Error?
+                          retcode      = lv_retcode ).      " Text of Error
+                    endif.
 
-                  loop at <lt_data> assigning field-symbol(<ls_data>).
-                    data(lv_row) = sy-tabix.
-                    do lines( lt_components ) times.
-                      data(lv_column) = sy-index.
-                      append initial line to lt_content assigning field-symbol(<ls_content>).
-                      if <ls_content> is assigned.
-                        <ls_content>-row = lv_row.
-                        <ls_content>-column = lv_column.
-                        assign component sy-index of structure <ls_data> to field-symbol(<lv>).
-                        if <lv> is assigned.
-                          <ls_content>-value = condense( conv char256( <lv> ) ).
-                        endif.
-                      endif.
-                      unassign:
-                        <ls_content>,
-                        <lv>.
-                      clear lv_column.
-                    enddo.
+                    clear:
+                     lt_content,
+                     lt_ranges.
+
+                    data(lv_row) = value i( ).
                     clear lv_row.
-                  endloop.
+                    loop at <lt_data> assigning field-symbol(<ls_data>).
+                      if sy-tabix > lv_end.
+                        exit.
+                      endif.
+                      if sy-tabix not between lv_start and lv_end.
+                        continue.
+                      endif.
+                      lv_row = lv_row + 1.
+                      do lines( lt_components ) times.
+                        data(lv_column) = sy-index.
+                        append initial line to lt_content assigning field-symbol(<ls_content>).
+                        if <ls_content> is assigned.
+                          <ls_content>-row = condense( |{ lv_row }| ).
+                          <ls_content>-column = condense( |{ lv_column }| ).
+                          assign component sy-index of structure <ls_data> to field-symbol(<lv>).
+                          if <lv> is assigned.
+                            <ls_content>-value = condense( conv char256( <lv> ) ).
+                          endif.
+                        endif.
+                        unassign:
+                          <ls_content>,
+                          <lv>.
+                        clear lv_column.
+                      enddo.
+                    endloop.
 
-                  lt_ranges = value soi_range_list( ( name    = lc_range_data
-                                                      rows    = lv_rows
-                                                      columns = lv_columns ) ).
+                    lt_ranges = value soi_range_list( ( name    = lc_range_data
+                                                        rows    = lv_rows
+                                                        columns = lv_columns ) ).
 
-                  lo_sheet_interface->set_ranges_data(
-                    exporting
-                      ranges    = lt_ranges       " Ranges in the Sheet
-                      contents  = lt_content      " Contents of the Ranges
-                    importing
-                      error     = lo_error        " Errors?
-                      retcode   = lv_retcode ).   " Text of the Error
+                    lo_sheet_interface->set_ranges_data(
+                      exporting
+                        ranges    = lt_ranges       " Ranges in the Sheet
+                        contents  = lt_content      " Contents of the Ranges
+*                        no_flush  = abap_true       " Do not flush automation queue (yet!)
+                      importing
+                        error     = lo_error        " Errors?
+                        retcode   = lv_retcode ).   " Text of the Error
+
+                    lv_start = lv_end + 1.
+                  enddo.
 
                   " returns message SOFFICEINTEGRATION 205 many a times - above method is an alternative that works
 *                  lo_sheet_interface->insert_one_table(
@@ -1118,6 +1177,7 @@ class lcl_helper implementation.
                   lo_sheet_interface->fit_widest(
                     exporting
                       name     = space
+*                      no_flush = abap_true      " Do not flush automation queue (yet!)
                     importing
                       error    = lo_error       " Error?
                       retcode  = lv_retcode ).  " text
@@ -1135,7 +1195,11 @@ class lcl_helper implementation.
                 lv_columns,
                 lt_content,
                 lt_ranges,
-                lt_fields_fcat.
+                lt_fields_fcat,
+                lv_top,
+                lv_count,
+                lv_start,
+                lv_end.
 
               unassign <ls_field>.
             endloop.
@@ -1149,11 +1213,15 @@ class lcl_helper implementation.
 *                retcode  = lv_retcode ).  " Text of Error
 
             " temp save without user interaction
-            data(lv_temp_file) = get_temp_file_path( ).
+            data(lv_temp_file) = get_temp_file_path(
+                                   exporting
+                                     iv_front_end = abap_true
+                                     iv_extension = zcl_helper=>gc_extension-xls ).
 
             lo_document_proxy->save_as(
               exporting
                 file_name   = |{ lv_temp_file }|
+*                no_flush    = abap_false            " now flush the queue
               importing
                 error       = lo_error
                 retcode     = lv_retcode ).
@@ -1181,11 +1249,15 @@ class lcl_helper implementation.
           endif.
 
           lo_document_proxy->close_document(
+*            exporting
+*              no_flush    = abap_true
             importing
               error       = lo_error
               retcode     = lv_retcode ).
 
           lo_document_proxy->release_document(
+*            exporting
+*              no_flush = abap_true
             importing
               error    = lo_error
               retcode  = lv_retcode ).
@@ -1193,11 +1265,15 @@ class lcl_helper implementation.
       endif.
 
       lo_container_control->release_all_documents(
+*        exporting
+*          no_flush = abap_true
         importing
           error    = lo_error
           retcode  = lv_retcode ).
 
       lo_container_control->destroy_control(
+*        exporting
+*          no_flush = abap_false
         importing
           error    = lo_error
           retcode  = lv_retcode ).
@@ -1238,32 +1314,90 @@ class lcl_helper implementation.
 
   method get_temp_file_path.
     clear rv_temp_file.
+
+    data(lv_front_end)  = iv_front_end.
+    data(lv_app_server) = iv_app_server.
+    data(lv_extension)  = iv_extension.
+
+    if lv_front_end = abap_false and lv_app_server = abap_false.
+      if not cl_demo_sap_gui=>check( ) or sy-batch = abap_true.
+        lv_app_server = abap_true.
+      else.
+        lv_front_end = abap_true.
+      endif.
+    endif.
+
+    if lv_front_end = abap_true and lv_app_server = abap_true.
+      return. " invalid parameter combo
+    endif.
+
+    if lv_extension is initial.
+      lv_extension = zcl_helper=>gc_extension-bin.
+    endif.
+
     data(lv_temp_dir) = value string( ).
-    cl_gui_frontend_services=>get_temp_directory(
-      changing
-        temp_dir             = lv_temp_dir " Temporary Directory
-      exceptions
-        cntl_error           = 1        " Control error
-        error_no_gui         = 2        " No GUI available
-        not_supported_by_gui = 3        " GUI does not support this
-        others               = 4 ).
-    if sy-subrc <> 0.
-      message id sy-msgid type sy-msgty number sy-msgno
-        with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
-    else.
-      cl_gui_cfw=>flush(
+
+    if lv_front_end = abap_true.
+      data(lv_separator) = zcl_helper=>gc_path_sep-windows.
+      cl_gui_frontend_services=>get_temp_directory(
+        changing
+          temp_dir             = lv_temp_dir " Temporary Directory
         exceptions
-          cntl_system_error = 1 " cntl_system_error
-          cntl_error        = 2 " cntl_error
-          others            = 3 ).
+          cntl_error           = 1        " Control error
+          error_no_gui         = 2        " No GUI available
+          not_supported_by_gui = 3        " GUI does not support this
+          others               = 4 ).
       if sy-subrc <> 0.
         message id sy-msgid type sy-msgty number sy-msgno
           with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
       else.
-        data(lv_temp_file) = |{ lv_temp_dir }\\sap_data_{ sy-datum }_{ sy-uzeit }.xls|.
+        cl_gui_cfw=>flush(
+          exceptions
+            cntl_system_error = 1 " cntl_system_error
+            cntl_error        = 2 " cntl_error
+            others            = 3 ).
+        if sy-subrc <> 0.
+          message id sy-msgid type sy-msgty number sy-msgno
+            with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        endif.
       endif.
     endif.
 
+    if lv_app_server = abap_true.
+      lv_separator = zcl_helper=>gc_path_sep-unix.
+      data(lv_dir_path) = value dirname_al11( ).
+      data(lv_program)  = conv authb-program( sy-cprog ).
+      data(lv_function) = conv authb-cfuncname( 'C_SAPGPARAM' ).
+
+      " check authority before calling C function to avoid runtime error
+      call function 'AUTHORITY_CHECK_C_FUNCTION'
+        exporting
+          program          = lv_program
+          activity         = sabc_act_call
+          function         = lv_function
+        exceptions
+          no_authority     = 1
+          activity_unknown = 2
+          others           = 3.
+      if sy-subrc <> 0.
+        message id sy-msgid type sy-msgty number sy-msgno
+          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into data(lv_msg).
+
+        return.
+      endif.
+
+      " C function call to retrieve app server path using paramter(alias)
+      call 'C_SAPGPARAM' id 'NAME'  field 'DIR_TRANS'
+                         id 'VALUE' field lv_dir_path.
+
+      if lv_dir_path is not initial.
+        lv_temp_dir = lv_dir_path.
+      else.
+        return.
+      endif.
+    endif.
+
+    data(lv_temp_file) = condense( |{ condense( lv_temp_dir ) }{ lv_separator }{ sy-cprog }_{ sy-datum }_{ sy-uzeit }.{ lv_extension }| ).
     rv_temp_file = lv_temp_file.
   endmethod.
 
@@ -1288,7 +1422,7 @@ class lcl_helper implementation.
           others               = 9 ).
       if sy-subrc <> 0.
         message id sy-msgid type sy-msgty number sy-msgno
-          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+          with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into data(lv_dummy).
       else.
         cl_gui_cfw=>flush(
           exceptions

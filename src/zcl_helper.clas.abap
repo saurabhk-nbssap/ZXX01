@@ -59,6 +59,13 @@ public section.
       unix    type c length 1 value '/',
     end of gc_path_sep .
 
+  constants:
+    begin of gc_extension,
+      xls  type c length 3 value 'XLS',
+      xlsx type c length 4 value 'XLSX',
+      bin  type c length 3 value 'BIN',
+    end of gc_extension.
+
   class-methods XML_TO_ABAP
     importing
       value(XML_INPUT) type STRING
@@ -188,18 +195,16 @@ public section.
     exporting
       value(ET_EXCEL) type TTY_EXCEL
     changing
-      value(CT_ITAB) type STANDARD TABLE .
+      value(CT_ITAB) type ANY TABLE .
   class-methods ITAB_TO_EXCEL
     importing
-      value(IT_ITAB) type STANDARD TABLE optional
+      value(IT_ITAB) type ANY TABLE optional
       value(IT_FIELDS) type TTY_FIELDS optional
       value(IV_INSERT_HEADER) type ABAP_BOOL default ABAP_TRUE
       value(IV_FORCE_STRING) type ABAP_BOOL optional
-      value(IV_FILE_NAME) type STRING default 'SAP_DATA'
+      value(IV_FILE_PATH) type STRING optional
       value(IV_SHEET_NAME) type STRING default 'SAP_DATA'
       value(IT_MULTI_SHEET_DATA) type TTY_SHEET optional
-      value(IV_DIRECT_DOWNLOAD) type ABAP_BOOL default ABAP_FALSE
-      value(IV_APP_SERVER_FILEPATH) type STRING optional
     exporting
       value(EV_FILE_LENGTH) type I
     returning
@@ -210,7 +215,7 @@ public section.
       value(IS_DATA) type ANY .
   class-methods CHECK_FILE_FORMAT
     changing
-      value(CTAB) type STANDARD TABLE
+      value(CTAB) type ANY TABLE
     exceptions
       FILE_FORMAT_ALTERED .
   class-methods CLEAR_X_FIELDS
@@ -800,29 +805,30 @@ CLASS ZCL_HELPER IMPLEMENTATION.
   method check_file_format.
     check ctab is not initial.
     data: lo_struct type ref to cl_abap_structdescr,
-          lo_table  type ref to cl_abap_tabledescr,
-          lt_comp   type cl_abap_structdescr=>component_table,
-          ls_comp   like line of lt_comp.
+          lo_table  type ref to cl_abap_tabledescr.
 
     free: lo_table, lo_struct.
-    refresh lt_comp.
     lo_table  ?=  cl_abap_structdescr=>describe_by_data( ctab[] ).
     lo_struct ?=  lo_table->get_table_line_type( ).
-    lt_comp   =   lo_struct->get_components( ).
+    data(lt_comp) = lo_struct->components.
 
-    loop at lt_comp into ls_comp where as_include = abap_true.
-      try.
-          lo_struct ?= ls_comp-type.
-          append lines of lo_struct->get_components( ) to lt_comp.
-        catch cx_sy_move_cast_error ##no_handler.
-      endtry.
-      clear ls_comp.
+*    loop at lt_comp into ls_comp where as_include = abap_true.
+*      try.
+*          lo_struct ?= ls_comp-type.
+*          append lines of lo_struct->components to lt_comp.
+*        catch cx_sy_move_cast_error ##no_handler.
+*      endtry.
+*      clear ls_comp.
+*    endloop.
+*
+*    delete lt_comp where as_include = abap_true.
+
+    " support for hashed tables
+    loop at ctab assigning field-symbol(<table_line>).
+      exit.
     endloop.
-
-    delete lt_comp where as_include = abap_true.
-
-    read table ctab assigning field-symbol(<table_line>) index 1.
-    if sy-subrc = 0.
+*    read table ctab assigning field-symbol(<table_line>) index 1.
+*    if sy-subrc = 0.
       do.
         assign component sy-index of structure <table_line> to field-symbol(<fs>).
         if sy-subrc <> 0.
@@ -832,17 +838,17 @@ CLASS ZCL_HELPER IMPLEMENTATION.
           condense <fs>.
           <fs> = shift_left( val = <fs> sub = '' ).
 
-          clear ls_comp.
-          read table lt_comp into ls_comp index sy-index.
+          read table lt_comp into data(ls_comp) index sy-index.
           if sy-subrc = 0 and to_upper( ls_comp-name ) <> to_upper( <fs> ).
             message ls_comp-name && ': Field sequence altered. Please check your file format' type 'S' display like 'E'.
             raise file_format_altered.
           endif.
         endif.
         unassign <fs>.
+        clear ls_comp.
       enddo.
-    endif.
-    delete ctab index 1.
+*    endif.
+    delete table ctab from <table_line>.
   endmethod.
 
 
@@ -870,7 +876,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
 
   method condense_data.
-    field-symbols: <flt> type standard table.
+    field-symbols: <flt> type any table.
     check cs_data is not initial.
 
     data(lo_descr) = cl_abap_typedescr=>describe_by_data( exporting p_data  = cs_data ).
@@ -1342,6 +1348,12 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       return.
     endif.
 
+    rv_deleted = xsdbool( check_file_exists( exporting iv_filepath = lv_filepath ) = abap_false ).
+
+    if rv_deleted = abap_true.
+      return.
+    endif.
+
 * ---- Compute filepath type ---- *
     data(lv_file_path_type) = cond #( when lv_filepath ca gc_path_sep-windows then gc_path_sep-windows
                                       when lv_filepath ca gc_path_sep-unix then gc_path_sep-unix ).
@@ -1732,6 +1744,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     check iv_file is not initial.
     clear ct_itab.
 
+    assign ct_itab to field-symbol(<lt_itab>).
+
     data(lo_helper) = new lcl_helper( ).
 
     data: index       type i,
@@ -1749,23 +1763,23 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         i_total              = 2                " Total Number of Objects to Be Processed
         i_output_immediately = abap_true ).     " X = Display Progress Immediately
 
-    data(lo_table)  = cast cl_abap_tabledescr( cl_abap_structdescr=>describe_by_data( ct_itab ) ).
+    data(lo_table)  = cast cl_abap_tabledescr( cl_abap_structdescr=>describe_by_data( <lt_itab> ) ).
     if lo_table is bound.
       data(lo_struct) = cast cl_abap_structdescr( lo_table->get_table_line_type( ) ).
     endif.
     if lo_struct is bound.
-      data(lt_comp) = lo_struct->get_components( ).
+      data(lt_comp) = lo_struct->components.
 
-      loop at lt_comp into data(ls_comp) where as_include = abap_true.
-        try.
-            lo_struct ?= ls_comp-type.
-            append lines of lo_struct->get_components( ) to lt_comp.
-          catch cx_sy_move_cast_error ##no_handler.
-        endtry.
-        clear ls_comp.
-      endloop.
-
-      delete lt_comp where as_include = abap_true.
+*      loop at lt_comp into data(ls_comp) where as_include = abap_true.
+*        try.
+*            lo_struct ?= ls_comp-type.
+*            append lines of lo_struct->components to lt_comp.
+*          catch cx_sy_move_cast_error ##no_handler.
+*        endtry.
+*        clear ls_comp.
+*      endloop.
+*
+*      delete lt_comp where as_include = abap_true.
     endif.
 
     data(lv_file) = conv char1024( iv_file ).
@@ -1788,7 +1802,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
     if lo_helper is bound.
       case to_upper( lv_file_ext ).
-        when 'XLS'.
+        when gc_extension-xls.
 *      lo_helper->excel_to_itab_ole(
 *        exporting
 *          filename                = iv_file
@@ -1812,7 +1826,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                                iv_sheet_no = iv_sheet_number
                              importing
                                et_sheets   = lt_sheets ).
-        when 'XLSX'.
+        when gc_extension-xlsx.
 *        data: lt_tab_raw_data type truxs_t_text_data.
 *
 *        call function 'TEXT_CONVERT_XLS_TO_SAP'
@@ -1822,7 +1836,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 *            i_tab_raw_data       = lt_tab_raw_data
 *            i_filename           = iv_file
 *          tables
-*            i_tab_converted_data = ct_itab
+*            i_tab_converted_data = <lt_itab>
 *          exceptions
 *            conversion_failed    = 1
 *            others               = 2.
@@ -1849,6 +1863,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
       delete lt_excel where row <= iv_no_of_headers.
 
+      data lr_itab type ref to data.
+      create data lr_itab like line of <lt_itab>.
+
       if iv_move_corresponding = abap_true.
         " check file format here
 
@@ -1865,8 +1882,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
           data(lv_col) = condense( to_upper( ls_excel-value ) ).
 
 *        if lv_col is not initial.
-          clear ls_comp.
-          read table lt_comp into ls_comp with key name = lv_col.
+          read table lt_comp into data(ls_comp) with key name = lv_col.
           if sy-subrc = 0.
             clear: ls_map.
             ls_map-excel_index = ls_excel-col.
@@ -1879,7 +1895,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
             endif.
           endif.
 *        endif.
-          clear ls_excel.
+          clear:
+            ls_excel,
+            ls_comp.
         endloop.
 
         if lt_map is not initial.
@@ -1892,7 +1910,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         if lt_excel is not initial and lt_map is not initial.
           loop at lt_excel into ls_excel.
             at new row.
-              append initial line to ct_itab assigning field-symbol(<ls_itab>).
+              if lr_itab is bound.
+                assign lr_itab->* to field-symbol(<ls_itab>).
+              endif.
               if <ls_itab> is assigned.
                 clear <ls_itab>.
               endif.
@@ -1901,40 +1921,51 @@ CLASS ZCL_HELPER IMPLEMENTATION.
             try.
                 index = lt_map[ key primary_key excel_index = ls_excel-col ]-itab_index.
 *        move ls_excel-col to index.
-                assign component index of structure <ls_itab> to field-symbol(<fs>).
-                if sy-subrc = 0 and <fs> is assigned. " Incase there are more xls columns than fields
-                  move ls_excel-value to <fs>.
+                assign component index of structure <ls_itab> to field-symbol(<fv>).
+                if sy-subrc = 0 and <fv> is assigned. " Incase there are more xls columns than fields
+                  move ls_excel-value to <fv>.
                 endif.
               catch cx_sy_itab_line_not_found ##no_handler.
             endtry.
             clear ls_excel.
-            unassign <fs>.
+            unassign <fv>.
+
+            at end of row.
+              insert <ls_itab> into table <lt_itab>.
+              unassign <ls_itab>.
+            endat.
           endloop.
         endif.
       else.
         " move sequential implemetation
         if lt_excel is not initial.
-          unassign <ls_itab>.
           loop at lt_excel into ls_excel.
             at new row.
-              append initial line to ct_itab assigning <ls_itab>.
-              if <ls_itab> is assigned.
+              if lr_itab is bound.
+                assign lr_itab->* to <ls_itab>.
+              endif.
+              if <ls_itab> is bound.
                 clear <ls_itab>.
               endif.
             endat.
             clear index.
             move ls_excel-col to index.
-            assign component index of structure <ls_itab> to <fs>.
-            if sy-subrc = 0 and <fs> is assigned. " Incase there are more xls columns than fields
-              move ls_excel-value to <fs>.
+            assign component index of structure <ls_itab> to <fv>.
+            if sy-subrc = 0 and <fv> is assigned. " Incase there are more xls columns than fields
+              move ls_excel-value to <fv>.
             endif.
             clear ls_excel.
-            unassign <fs>.
+            unassign <fv>.
+
+            at end of row.
+              insert <ls_itab> into table <lt_itab>.
+              unassign <ls_itab>.
+            endat.
           endloop.
         endif.
       endif.
 
-      if ct_itab is not initial and iv_read_all_sheets = abap_false.
+      if <lt_itab> is not initial and iv_read_all_sheets = abap_false.
         append initial line to et_excel assigning field-symbol(<ls_excel>).
         if <ls_excel> is assigned.
           try.
@@ -1942,7 +1973,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               <ls_excel> = value #( sheet_name = ls_sheet-sheetname
                                     rows       = ls_sheet-num_rows
                                     cols       = ls_sheet-num_cols
-                                    data_tab   = ref #( ct_itab ) ).
+                                    data_tab   = ref #( <lt_itab> ) ).
             catch cx_sy_itab_line_not_found ##no_handler.
           endtry.
         endif.
@@ -1953,16 +1984,16 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       endif.
 
       " check file format for move corresponding is tackled in its own block above
-      if ct_itab is not initial and iv_check_file_format eq abap_true and iv_move_corresponding = abap_false.
-        check_file_format( changing ctab = ct_itab exceptions file_format_altered = 1 others = 2 ).
+      if <lt_itab> is not initial and iv_check_file_format eq abap_true and iv_move_corresponding = abap_false.
+        check_file_format( changing ctab = <lt_itab> exceptions file_format_altered = 1 others = 2 ).
         if sy-subrc <> 0.
-          clear ct_itab.
+          clear <lt_itab>.
         endif.
       endif.
     endif.
 
-    if ct_itab is not initial and iv_with_conv_exit = abap_true.
-      loop at ct_itab assigning <ls_itab>.
+    if <lt_itab> is not initial and iv_with_conv_exit = abap_true.
+      loop at <lt_itab> assigning <ls_itab>.
         format_excel_to_bapi(
           changing
             is_excel = <ls_itab>      " Single line of data from excel
@@ -2131,6 +2162,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     constants: c_datax_type type rollname value 'BAPIUPDATE'.
 
     try.
+        data(lt_components) =
+          cast cl_abap_structdescr( cl_abap_typedescr=>describe_by_data( exporting p_data = data ) )->components.
+
         clear: lo_descr, lv_relative_name.
 
         unassign: <fs_data>, <fs_datax>, <fs_x>.
@@ -2140,16 +2174,16 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
         if <fs_data> is assigned and <fs_datax> is assigned.
           clear: <fs_datax>.
-          move 0 to sy-subrc.
-          do.
+*          move 0 to sy-subrc.
+          loop at lt_components into data(ls_component).
             unassign <fs_x>.
-            assign component sy-index of structure <fs_datax> to <fs_x>.
-            if sy-subrc <> 0.
-              exit.
-            endif.
+            assign component ls_component-name of structure <fs_datax> to <fs_x>.
+*            if sy-subrc <> 0.
+*              exit.
+*            endif.
             if <fs_x> is assigned.
               unassign <fs>.
-              assign component sy-index of structure <fs_data> to <fs>.
+              assign component ls_component-name of structure <fs_data> to <fs>.
               if <fs> is assigned and <fs> is not initial.
                 free lo_descr.
                 lo_descr = cl_abap_typedescr=>describe_by_data( p_data = <fs_x> ).
@@ -2165,7 +2199,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                 endif.
               endif.
             endif.
-          enddo.
+            clear ls_component.
+          endloop.
         endif.
       catch cx_root into data(lox_root).
     endtry.
@@ -2515,28 +2550,55 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
 
   method itab_to_excel.
-    constants: lc_def_ext type string value 'XLSX',
-               lc_xls_ext type string value 'XLS'.
-
     clear:
       rt_data,
       ev_file_length.
 
     data(lo_helper) = new lcl_helper( ).
 
+    data(lv_filepath) = iv_file_path.
+
     " compute file extension
     data(lv_file_ext) = value char50( ).
-    data(lv_file) = cond char1024( when iv_file_name is not initial then iv_file_name
-                                   when iv_app_server_filepath is not initial then iv_app_server_filepath ).
 
-    call function 'TRINT_FILE_GET_EXTENSION'
-      exporting
-        filename  = lv_file
-      importing
-        extension = lv_file_ext.
+    data: lr_file type ref to data.
+    data(lv_len) = strlen( lv_filepath ).
+
+    create data lr_file type c length lv_len.
+    if lr_file is bound.
+      assign lr_file->* to field-symbol(<lv_file>).
+    endif.
+
+    if <lv_file> is assigned.
+      <lv_file> = lv_filepath.
+
+      call function 'TRINT_FILE_GET_EXTENSION'
+        exporting
+          filename  = <lv_file>
+        importing
+          extension = lv_file_ext.
+    endif.
 
     if lv_file_ext is initial.
-      lv_file_ext = lc_def_ext.
+      lv_file_ext = gc_extension-xlsx.
+    endif.
+
+* ---- Compute filepath type ---- *
+    if lv_filepath is not initial.
+      data(lv_file_path_type) = cond #( when lv_filepath ca gc_path_sep-windows then gc_path_sep-windows
+                                        when lv_filepath ca gc_path_sep-unix then gc_path_sep-unix ).
+
+      if not lo_helper->validate_file_path(
+                exporting
+                  iv_filepath          = lv_filepath
+                  iv_contains_filename = abap_true ).
+
+        lv_filepath = switch #( lv_file_path_type
+                                  when gc_path_sep-windows then gc_path_sep-windows
+                                  when gc_path_sep-unix then gc_path_sep-unix ).
+
+        message 'Invalid download/file path specified. File will be downloaded to default path.' type 'S' display like 'W'.
+      endif.
     endif.
 
     if it_multi_sheet_data is not initial.
@@ -2570,11 +2632,11 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       endif.
 
       case lv_file_ext.
-        when lc_def_ext.
+        when gc_extension-xlsx.
           data(lv_data) = lo_helper->itab_to_excel_ehfnd(
                         exporting
                           it_multi_sheet_data = lt_multi_sheet_data ).
-        when lc_xls_ext.
+        when gc_extension-xls.
           lv_data = lo_helper->itab_to_excel_soi(
                       exporting
                         it_multi_sheet_data = lt_multi_sheet_data ).
@@ -2590,69 +2652,46 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                               iv_xstring = lv_data ).
       rt_data = lt_data.
 
-      if iv_direct_download = abap_true.
-        if not lo_helper->validate_file_path(
-                 exporting
-                   iv_filepath          = iv_file_name
-                   iv_contains_filename = abap_true ).
-          data:
-            lv_window_title      type string,
-            lv_fullpath          type string,
-            lv_default_extension type string,
-            lv_default_file_name type string,
-            lv_file_filter       type string.
-
-          clear:
-            lv_window_title,
-            lv_default_extension,
-            lv_default_file_name,
-            lv_file_filter.
-
-          lv_window_title = 'Specify folder and file name to save excel file'.
-          lv_default_extension = lv_file_ext.
-          lv_file_filter = |Excel files(*.{ lv_file_ext })\|*.{ lv_file_ext }|. " description|*.extension
-          lv_default_file_name = replace( val = to_upper( iv_file_name ) sub = |.{ lv_file_ext }| with = '' occ = 0 ).
-
-          lv_fullpath = file_save_dialog(
-                          exporting
-                            iv_window_title      = lv_window_title
-                            iv_file_filter       = lv_file_filter
-                            iv_default_extension = lv_default_extension
-                            iv_default_file_name = lv_default_file_name ).
-
-        else.
-          lv_fullpath = iv_file_name.
-        endif.
-
-        if lv_fullpath is not initial.
-          try.
-              data(lv_uploaded) = write_file_to_path(
-                exporting
-                  iv_filepath    = lv_fullpath        " Path of file to write to on frontend or app server
-                  iv_file_length = lv_file_length     " Size of binary data
-                  it_data        = lt_data ).         " Binary Data
-            catch zcx_generic into data(lox_generic). " Generic Exception Class
-              message lox_generic type 'S' display like 'E'.
-          endtry.
-        else.
-          message 'No folder selected' type 'S' display like 'E'.
-        endif.
-      endif.
-
-      if iv_app_server_filepath is not initial.
-        data(lv_app_server_filepath) = iv_app_server_filepath.
+      if lv_filepath is not initial.
         try.
-            clear lv_uploaded.
-            lv_uploaded = write_file_to_path(
-                            exporting
-                              iv_filepath    = lv_app_server_filepath   " Path of file on app server
-                              iv_file_length = lv_file_length
-                              it_data        = lt_data ).               " Binary data to be uploaded
-          catch zcx_generic into lox_generic. " Generic Exception Class
+            data(lv_uploaded) = write_file_to_path(
+              exporting
+                iv_filepath    = lv_filepath        " Path of file to write to on frontend or app server
+                iv_file_length = lv_file_length     " Size of binary data
+                it_data        = lt_data ).         " Binary Data
+          catch zcx_generic into data(lox_generic). " Generic Exception Class
             message lox_generic type 'S' display like 'E'.
         endtry.
       endif.
     endif.
+
+*        data:
+*          lv_window_title      type string,
+*          lv_default_extension type string,
+*          lv_default_file_name type string,
+*          lv_file_filter       type string.
+*
+*        clear:
+*          lv_window_title,
+*          lv_default_extension,
+*          lv_default_file_name,
+*          lv_file_filter.
+*
+*        lv_window_title = 'Specify folder and file name to save excel file'.
+*        lv_default_extension = lv_file_ext.
+*        lv_file_filter = |Excel files(*.{ lv_file_ext })\|*.{ lv_file_ext }|. " description|*.extension
+*        lv_default_file_name = replace( val = to_upper( iv_file_name ) sub = |.{ lv_file_ext }| with = '' occ = 0 ).
+*
+*        lv_filepath = file_save_dialog(
+*                        exporting
+*                          iv_window_title      = lv_window_title
+*                          iv_file_filter       = lv_file_filter
+*                          iv_default_extension = lv_default_extension
+*                          iv_default_file_name = lv_default_file_name ).
+*
+*        if lv_filepath is initial.
+*          message 'No path selected' type 'S' display like 'E'.
+*        endif.
   endmethod.
 
 
@@ -2727,8 +2766,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
   method read_file_from_path.
     constants: lc_msg_id           type syst-msgid value '00',
                lc_msg_no           type syst-msgno value '001',
-               lc_logical_filename type filename-fileintern value 'EHS_FTAPPL_2', " same as that used in CG3Y
-               lc_binary           type c length 10 value 'BIN'.
+               lc_logical_filename type filename-fileintern value 'EHS_FTAPPL_2'. " same as that used in CG3Y
 
     data ls_data like line of rt_data.
 
@@ -2762,7 +2800,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         cl_gui_frontend_services=>gui_upload(
           exporting
             filename                = lv_filepath        " Name of file
-            filetype                = lc_binary          " File Type (ASCII, Binary)
+            filetype                = conv #( gc_extension-bin )   " File Type (ASCII, Binary)
           importing
             filelength              = ev_file_length     " File Length
           changing
@@ -2791,6 +2829,10 @@ CLASS ZCL_HELPER IMPLEMENTATION.
           message id sy-msgid type sy-msgty number sy-msgno
                  with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
           raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
+        else.
+          if ev_file_length is not initial.
+            message |{ ev_file_length } bytes read from { lv_filepath }| type 'S'.
+          endif.
         endif.
       when gc_path_sep-unix.
 * ---- check the authority to read the file from the application server ---- *
@@ -2857,6 +2899,10 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                   try.
                       " close the dataset after reading
                       close dataset lv_filepath.
+
+                      if ev_file_length is not initial.
+                        message |{ ev_file_length } bytes read from { lv_filepath }| type 'S'.
+                      endif.
                     catch cx_sy_file_close into data(lox_file_close).
                       lv_msg = lox_file_close->get_text( ).
                       raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
@@ -3061,8 +3107,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
     constants: lc_msg_id           type syst-msgid value '00',
                lc_msg_no           type syst-msgno value '001',
-               lc_logical_filename type filename-fileintern value 'EHS_FTAPPL_2', " same as that used in CG3Y
-               lc_binary           type c length 10 value 'BIN'.
+               lc_logical_filename type filename-fileintern value 'EHS_FTAPPL_2'. " same as that used in CG3Y
 
     clear rv_uploaded.
 
@@ -3096,10 +3141,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
           raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
         endif.
         if strlen( lv_filepath ) = 1 and lv_filepath = gc_path_sep-windows. " indicator that the default filepath is to be used
-          if lo_helper is bound.
-            lv_filepath = |{ lo_helper->get_temp_file_path( ) }{ gc_path_sep-windows }| &&
-                          |{ sy-cprog }_{ sy-datum date = user }_{ sy-uzeit time = user }.bin|.
-          endif.
+          lv_filepath = cond #( when lo_helper is bound then lo_helper->get_temp_file_path(
+                                                               exporting
+                                                                 iv_front_end  = abap_true ) ).
         endif.
         if lv_filepath is not initial.
           " to-do: validate filename/path
@@ -3116,7 +3160,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               exporting
                 bin_filesize              = cond #( when lv_file_length is not initial then lv_file_length )
                 filename                  = lv_filepath
-                filetype                  = lc_binary
+                filetype                  = conv #( gc_extension-bin )
                 confirm_overwrite         = lv_overwrite
               importing
                 filelength                = data(lv_bytes_transferred)
@@ -3164,38 +3208,15 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       when gc_path_sep-unix.
 * ---- set default app server filepath if not supplied ---- *
         if strlen( lv_filepath ) = 1 and lv_filepath = gc_path_sep-unix. " indicator that the default filepath is to be used
-
-          data(lv_dir_path) = value dirname_al11( ).
-          data(lv_program)  = conv authb-program( sy-cprog ).
-          data(lv_function) = conv authb-cfuncname( 'C_SAPGPARAM' ).
-
-          " check authority before calling C function to avoid runtime error
-          call function 'AUTHORITY_CHECK_C_FUNCTION'
-            exporting
-              program          = lv_program
-              activity         = sabc_act_call
-              function         = lv_function
-            exceptions
-              no_authority     = 1
-              activity_unknown = 2
-              others           = 3.
-          if sy-subrc <> 0.
-            message id sy-msgid type sy-msgty number sy-msgno
-              with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4 into lv_msg.
-            raise exception type zcx_generic message id lc_msg_id type 'E' number lc_msg_no with lv_msg.
-          endif.
-
-          " C function call to retrieve app server path using paramter(alias)
-          call 'C_SAPGPARAM' id 'NAME'  field 'DIR_TRANS'
-                             id 'VALUE' field lv_dir_path.
-
-          lv_filepath = |{ lv_dir_path }{ gc_path_sep-unix }| &&
-                        |{ sy-cprog }_{ sy-datum date = user }_{ sy-uzeit time = user }.bin|.
+          lv_filepath = cond #( when lo_helper is bound then lo_helper->get_temp_file_path(
+                                                               exporting
+                                                                 iv_app_server  = abap_true ) ).
         endif.
 
         if lv_filepath is not initial.
 * ---- check the authority to write the file to the application server ---- *
 *    if iv_with_auth_check = abap_true.
+          data(lv_program) = conv authb-program( sy-cprog ).
           data(lv_auth_filename) = conv authb-filename( lv_filepath ).
           call function 'AUTHORITY_CHECK_DATASET'
             exporting
@@ -3294,6 +3315,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                     try.
                         " close the dataset after writing
                         close dataset lv_filepath.
+
+                        message |{ lv_file_length } bytes transferred to { lv_filepath }| type 'S'.
 
                         " verify data upload...
                         rv_uploaded = check_file_exists( iv_filepath = lv_filepath ).
