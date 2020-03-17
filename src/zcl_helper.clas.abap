@@ -1944,7 +1944,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               if lr_itab is bound.
                 assign lr_itab->* to <ls_itab>.
               endif.
-              if <ls_itab> is bound.
+              if <ls_itab> is assigned.
                 clear <ls_itab>.
               endif.
             endat.
