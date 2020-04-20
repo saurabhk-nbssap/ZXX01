@@ -2561,12 +2561,14 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     " compute file extension
     data(lv_file_ext) = value char50( ).
 
-    data: lr_file type ref to data.
-    data(lv_len) = strlen( lv_filepath ).
+    if lv_filepath is not initial.
+      data: lr_file type ref to data.
+      data(lv_len) = strlen( lv_filepath ).
 
-    create data lr_file type c length lv_len.
-    if lr_file is bound.
-      assign lr_file->* to field-symbol(<lv_file>).
+      create data lr_file type c length lv_len.
+      if lr_file is bound.
+        assign lr_file->* to field-symbol(<lv_file>).
+      endif.
     endif.
 
     if <lv_file> is assigned.
