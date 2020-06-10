@@ -910,7 +910,7 @@ class lcl_helper implementation.
         exporting
           inplace_enabled          = abap_true
           r3_application_name      = lc_app_name                                  " Application Name
-          parent                   = cl_gui_custom_container=>default_screen      " Parent Container
+          parent                   = cl_gui_container=>default_screen             " Parent Container
 *          no_flush                 = abap_true                                    " Do not flush automation queue (yet!)
         importing
           error                    = lo_error                                     " Error Object
