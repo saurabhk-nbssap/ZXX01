@@ -920,8 +920,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
         try.  " for date conversion
             if strlen( <fs_iv> ) eq 10 and
               ( ( count( val = <fs_iv> sub = '.' ) eq 2 ) or ( count( val = <fs_iv> sub = '/' ) eq 2 ) or ( count( val = <fs_iv> sub = '-' ) eq 2 ) ).
-              replace all occurrences of '/' in iv with '.'.
-              replace all occurrences of '-' in iv with '.'.
+              replace all occurrences of '/' in <fs_iv> with '.'.
+              replace all occurrences of '-' in <fs_iv> with '.'.
               data lv_date type sy-datum.
               clear lv_date.
               call function 'CONVERT_DATE_INPUT'
@@ -942,6 +942,30 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                 return. " supplied input is a date, processing should end here
               endif.
             endif.
+
+            if strlen( <fs_iv> ) eq 8 and
+            ( ( count( val = <fs_iv> sub = ':' ) eq 2 ) or ( count( val = <fs_iv> sub = '.' ) eq 2 ) ).
+              replace all occurrences of '.' in <fs_iv> with ':'.
+              data lv_time type sy-uzeit.
+              clear lv_time.
+              call function 'CONVERT_TIME_INPUT'
+                exporting
+                  input                     = <fs_iv>
+                  plausibility_check        = abap_true
+                importing
+                  output                    = lv_time
+                exceptions
+                  plausibility_check_failed = 1
+                  wrong_format_in_input     = 2
+                  others                    = 3.
+              if sy-subrc <> 0.
+* Implement suitable error handling here
+              endif.
+              <fs_ev> = lv_time.
+              if <fs_ev> is not initial.
+                return. " supplied input is a date, processing should end here
+              endif.
+            endif.
           catch cx_sy_range_out_of_bounds.
             return.
           catch cx_sy_regex_too_complex.
@@ -956,20 +980,41 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       lo_elem = cast cl_abap_elemdescr( cl_abap_typedescr=>describe_by_data( exporting p_data = <fs_iv> ) ).
       if lo_elem is bound." and lo_elem->type_kind eq 'D'.  " date could be supplied in non-date field
         clear lv_date.
-        lv_date = <fs_iv>.
-        call function 'CONVERT_DATE_TO_EXTERNAL'
-          exporting
-            date_internal            = lv_date
-          importing
-            date_external            = <fs_ev>
-          exceptions
-            date_internal_is_invalid = 1
-            others                   = 2.
-        if sy-subrc <> 0.
+        lv_date = cond #( when lo_elem->type_kind eq 'D' or lo_elem->type_kind eq 'C' or lo_elem->type_kind eq 'g' then <fs_iv> ).
+        if lv_date is not initial or <fs_iv> = '00000000'.
+          call function 'CONVERT_DATE_TO_EXTERNAL'
+            exporting
+              date_internal            = lv_date
+            importing
+              date_external            = <fs_ev>
+            exceptions
+              date_internal_is_invalid = 1
+              others                   = 2.
+          if sy-subrc <> 0.
 * Implement suitable error handling here
+          endif.
+          if <fs_ev> is not initial.
+            return. " date conversion was successful, end processing
+          endif.
         endif.
-        if <fs_ev> is not initial.
-          return. " date conversion was successful, end processing
+
+        clear lv_time.
+        lv_time = cond #( when lo_elem->type_kind eq 'T' or lo_elem->type_kind eq 'C' or lo_elem->type_kind eq 'g' then <fs_iv> ).
+        if lv_time is not initial or <fs_iv> = '000000'.
+          try.
+              cl_abap_timefm=>conv_time_int_to_ext(
+                exporting
+                  time_int            = lv_time              " Type T for Internal Time Format
+                importing
+                  time_ext            = data(lv_time_out) ).            " External Represenation of Time
+
+              <fs_ev> = lv_time_out.
+
+              if <fs_ev> is not initial.
+                return. " time conversion was successful, end processing
+              endif.
+            catch cx_parameter_invalid_range. " Parameter with invalid value range
+          endtry.
         endif.
       endif.
     endif.
@@ -2244,6 +2289,27 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 * Implement suitable error handling here
                 endif.
                 <fs> = lv_date.
+              endif.
+
+              if strlen( <fs> ) eq 8 and
+                ( ( count( val = <fs> sub = ':' ) eq 2 ) or ( count( val = <fs> sub = '.' ) eq 2 ) ).
+                replace all occurrences of '.' in <fs> with ':'.
+                data lv_time type sy-uzeit.
+                clear lv_time.
+                call function 'CONVERT_TIME_INPUT'
+                  exporting
+                    input                     = <fs>
+                    plausibility_check        = abap_true
+                  importing
+                    output                    = lv_time
+                  exceptions
+                    plausibility_check_failed = 1
+                    wrong_format_in_input     = 2
+                    others                    = 3.
+                if sy-subrc <> 0.
+* Implement suitable error handling here
+                endif.
+                <fs> = lv_time.
               endif.
             catch cx_sy_range_out_of_bounds.
             catch cx_sy_regex_too_complex.
