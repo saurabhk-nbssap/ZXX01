@@ -984,15 +984,17 @@ class lcl_helper implementation.
 
                 if lv_retcode = c_oi_errors=>ret_ok.
                   data(lt_fields) = ls_sheet-fields.
-                  if lt_fields is not initial or ls_sheet-header = abap_true.
-                    data(lo_struct_descr) = cast cl_abap_structdescr(
-                                              cast cl_abap_tabledescr(
-                                                cl_abap_typedescr=>describe_by_data(
-                                                  exporting
-                                                    p_data = <lt_data> ) )->get_table_line_type( ) ).
 
-                    data(lt_components) = cond #( when lo_struct_descr is bound
-                                                  then lo_struct_descr->components ).
+                  data(lo_struct_descr) = cast cl_abap_structdescr(
+                                            cast cl_abap_tabledescr(
+                                              cl_abap_typedescr=>describe_by_data(
+                                                exporting
+                                                  p_data = <lt_data> ) )->get_table_line_type( ) ).
+
+                  data(lt_components) = cond #( when lo_struct_descr is bound
+                                                then lo_struct_descr->components ).
+
+                  if lt_fields is not initial or ls_sheet-header = abap_true.
 
 *                    loop at lt_components into data(ls_component) where as_include = abap_true.
 *                      append lines of cast cl_abap_structdescr( ls_component-type )->components to lt_components.
