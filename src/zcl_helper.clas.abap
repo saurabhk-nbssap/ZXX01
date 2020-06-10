@@ -981,7 +981,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       if lo_elem is bound." and lo_elem->type_kind eq 'D'.  " date could be supplied in non-date field
         clear lv_date.
         lv_date = cond #( when lo_elem->type_kind eq 'D' or lo_elem->type_kind eq 'C' or lo_elem->type_kind eq 'g' then <fs_iv> ).
-        if lv_date is not initial or <fs_iv> = '00000000'.
+        if lv_date is not initial.  " or <fs_iv> = '00000000'.
           call function 'CONVERT_DATE_TO_EXTERNAL'
             exporting
               date_internal            = lv_date
@@ -1000,7 +1000,7 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
         clear lv_time.
         lv_time = cond #( when lo_elem->type_kind eq 'T' or lo_elem->type_kind eq 'C' or lo_elem->type_kind eq 'g' then <fs_iv> ).
-        if lv_time is not initial or <fs_iv> = '000000'.
+        if lv_time is not initial.  " or <fs_iv> = '000000'.
           try.
               cl_abap_timefm=>conv_time_int_to_ext(
                 exporting
