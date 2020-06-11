@@ -647,12 +647,31 @@ class lcl_helper implementation.
                                              exporting
                                                iv_sheet_id = lines( lt_sheet_info ) - ( ls_sheet_info-sheet_id - 1 ) ).
                           if lo_sheet is bound.
-
+*--------------------------------------------------------------------*
+                            " Access local class data from global class
                             data(lo) = cast object( lo_sheet ).
 
-                            data(lv_fname) = 'MS_SHEET_DATA'.
-                            assign lo->(lv_fname) to field-symbol(<lt>).
+                            data(lv_fname) = conv string( 'MS_SHEET_DATA' ).
 
+                            unassign <ls_sheet_data>.
+                            assign lo->(lv_fname) to <ls_sheet_data>.
+
+                            clear lv_fname.
+                            lv_fname = 'MO_XLSX_DOC->MO_XLSX_STYLE'."->MV_STYLE_DATE'.
+                            assign lo->(lv_fname) to field-symbol(<lo_style>).
+
+                            data(lo_style) = cast object( <lo_style> ).
+
+                            data(lv_style_date) = value i( ).
+                            call method lo_style->('GET_DEFAULT_DATE_STYLE')
+                              receiving
+                                rv_style = lv_style_date.
+
+                            data(lv_style_time) = value i( ).
+                            call method lo_style->('GET_DEFAULT_TIME_STYLE')
+                              receiving
+                                rv_style = lv_style_time.
+*--------------------------------------------------------------------*
                             " all sheets table
                             append initial line to et_sheets assigning field-symbol(<ls_sheet>).
                             if <ls_sheet> is assigned.
@@ -675,6 +694,19 @@ class lcl_helper implementation.
                                                                    exporting
                                                                      iv_row = lv_row_index
                                                                      iv_column = lv_column_index ) ).
+
+                                      data(lv_style)
+                                        = <ls_sheet_data>-rows_tab[
+                                            position = conv #( lv_row_index )
+                                          ]-cells_tab[
+                                              position = conv #( lv_column_index )
+                                            ]-style.
+
+                                      case lv_style.
+                                        when lv_style_date.
+                                          <ls_excel>-value = conv sy-datum( '19000101' + <ls_excel>-value - 2 ).
+                                        when lv_style_time.
+                                      endcase.
                                     endif.
                                     clear lv_column_index.
                                     unassign <ls_excel>.
@@ -691,6 +723,17 @@ class lcl_helper implementation.
                             endif.
                             unassign <ls_sheet>.
                           endif.
+
+                          clear:
+                            lo,
+                            lv_fname,
+                            lo_style,
+                            lv_style_date,
+                            lv_style_time.
+
+                          unassign:
+                            <ls_sheet_data>,
+                            <lo_style>.
                         catch cx_openxml_format into data(lox_openxml_format).    " Packaging Error - Invalid Content
                           message lox_openxml_format->get_text( ) type 'S' display like 'E'.
                         catch cx_openxml_not_found into data(lox_openxml_not_found). " Part not found
