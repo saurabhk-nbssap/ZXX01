@@ -1,6 +1,29 @@
 *"* use this source file for the definition and implementation of
 *"* local helper classes, interface definitions and type
 *"* declarations
+
+define excel_time_to_sap_time.
+  data:
+    h type n length 2,
+    m type n length 2,
+    s type n length 2,
+    v_time type sy-uzeit,
+    v_num type float.
+
+  v_num = &1.
+  v_num = v_num * 24 .
+  h = floor( v_num ).
+  v_num = v_num - h.
+  v_num = v_num * 60.
+  m = floor( v_num ).
+  v_num = v_num - m.
+  v_num = v_num * 60.
+  s = v_num.
+  CONCATENATE h m s INTO v_time.
+
+  &1 = v_time.
+end-of-definition.
+
 *&---------------------------------------------------------------------*
 *& Class (Definition) lcl_helper
 *&---------------------------------------------------------------------*
@@ -536,29 +559,6 @@ class lcl_helper implementation.
   endmethod.
 
   method excel_to_itab_ehfnd.
-
-    define excel_time_to_sap_time.
-      data:
-        h type n length 2,
-        m type n length 2,
-        s type n length 2,
-        v_time type sy-uzeit,
-        v_num type float.
-
-      v_num = &1.
-      v_num = v_num * 24 .
-      h = floor( v_num ).
-      v_num = v_num - h.
-      v_num = v_num * 60.
-      m = floor( v_num ).
-      v_num = v_num - m.
-      v_num = v_num * 60.
-      s = v_num.
-      CONCATENATE h m s INTO v_time.
-
-      &1 = v_time.
-    end-of-definition.
-
     clear:
       rt_excel,
       et_sheets.
@@ -732,13 +732,6 @@ class lcl_helper implementation.
                                         lv_date = lv_date + lv_days.
 
                                         <ls_excel>-value = lv_date.
-                                      endif.
-
-                                      if <ls_excel>-value ca '.'.
-                                        split <ls_excel>-value at '.' into data(lv_i) data(lv_dec).
-                                        if strlen( lv_dec ) = 17 and lv_i <= 1. " this is a time field
-                                          excel_time_to_sap_time <ls_excel>-value.
-                                        endif.
                                       endif.
                                     endif.
                                     clear lv_column_index.
@@ -970,6 +963,12 @@ class lcl_helper implementation.
             endat.
             assign component ls_sheet-column of structure <ls_data> to field-symbol(<lv>).
             if sy-subrc = 0 and <lv> is assigned. " Incase there are more xls columns than fields
+              if ls_sheet-value ca '.'.
+                split ls_sheet-value at '.' into data(lv_i) data(lv_dec).
+                if strlen( lv_dec ) = 17 and lv_i <= 1. " this is a time field
+                  excel_time_to_sap_time ls_sheet-value.
+                endif.
+              endif.
               move ls_sheet-value to <lv>.
             endif.
             clear ls_sheet.
