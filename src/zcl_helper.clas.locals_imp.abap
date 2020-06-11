@@ -699,7 +699,7 @@ class lcl_helper implementation.
                                         = <ls_sheet_data>-rows_tab[
                                             position = conv #( lv_row_index )
                                           ]-cells_tab[
-                                              position = conv #( lv_column_index )
+                                              output_colnum = conv #( lv_column_index )
                                             ]-style.
 
                                       case lv_style.
