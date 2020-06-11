@@ -641,9 +641,12 @@ class lcl_helper implementation.
 
                   sort lt_sheet_info ascending by sheet_id.
 
-                  if line_exists( lt_sheet_info[ sheet_id = iv_sheet_no ] ).
-                    if iv_read_all_sheets = abap_false.
+                  if line_exists( lt_sheet_info[ sheet_id = iv_sheet_no ] ) or lines( lt_sheet_info ) >= 1.
+                    if iv_read_all_sheets = abap_false and lines( lt_sheet_info ) > 1.
                       delete lt_sheet_info where sheet_id <> iv_sheet_no.
+                      if lines( lt_sheet_info ) > 1.
+                        delete lt_sheet_info from 2.
+                      endif.
                     endif.
 
                     loop at lt_sheet_info into data(ls_sheet_info).
@@ -653,7 +656,9 @@ class lcl_helper implementation.
                           " we fetch the corresponding sheet data using the corrected sheet id
                           data(lo_sheet) = lo_doc->get_sheet_by_id(
                                              exporting
-                                               iv_sheet_id = lines( lt_sheet_info ) - ( ls_sheet_info-sheet_id - 1 ) ).
+                                               iv_sheet_id = cond #( when lines( lt_sheet_info ) > 1
+                                                                     then ( lines( lt_sheet_info ) - ( ls_sheet_info-sheet_id - 1 ) )
+                                                                     else ls_sheet_info-sheet_id ) ).
                           if lo_sheet is bound.
 *--------------------------------------------------------------------*
                             " Access local class data from global class
@@ -703,16 +708,19 @@ class lcl_helper implementation.
                                                                      iv_row = lv_row_index
                                                                      iv_column = lv_column_index ) ).
 
-                                      data(lv_style)
-                                        = <ls_sheet_data>-rows_tab[
-                                            position = conv #( lv_row_index )
-                                          ]-cells_tab[
-                                              output_colnum = conv #( lv_column_index )
-                                            ]-style.
+                                      try.
+                                          data(lv_style)
+                                            = <ls_sheet_data>-rows_tab[
+                                                position = conv #( lv_row_index )
+                                              ]-cells_tab[
+                                                  output_colnum = conv #( lv_column_index )
+                                                ]-style.
 
-                                      if lv_style = lv_style_date.
-                                        excel_date_to_sap_date( changing cv_excel_date = <ls_excel>-value ).
-                                      endif.
+                                          if lv_style = lv_style_date.
+                                            excel_date_to_sap_date( changing cv_excel_date = <ls_excel>-value ).
+                                          endif.
+                                        catch cx_sy_itab_line_not_found ##no_handler.
+                                      endtry.
                                     endif.
                                     clear lv_column_index.
                                     unassign <ls_excel>.
@@ -721,7 +729,7 @@ class lcl_helper implementation.
                                 enddo.
                                 <ls_sheet>-spreadsheet = corresponding #( lt_excel mapping row = row column = col value = value ).
                                 " return data for the sheet requested in standard table format
-                                if ls_sheet_info-sheet_id = iv_sheet_no.
+                                if ls_sheet_info-sheet_id = iv_sheet_no or lines( lt_sheet_info ) = 1.
                                   rt_excel = lt_excel.
                                 endif.
                               endif.
@@ -948,9 +956,9 @@ class lcl_helper implementation.
               endif.
 
               " Time field conversion to internal format
-              if ls_sheet-value ca '.'.
+              if ls_sheet-value co '.0123456789'.
                 split ls_sheet-value at '.' into data(lv_i) data(lv_dec).
-                if strlen( lv_dec ) >= 10 and lv_i = 0. " this is a decimal time field
+                if strlen( lv_dec ) >= 10 and lv_i = '0'. " this is a decimal time field
                   excel_time_to_sap_time( changing cv_excel_time = ls_sheet-value ).
                 endif.
               endif.
@@ -1690,7 +1698,7 @@ class lcl_helper implementation.
   endmethod.
 
   method excel_date_to_sap_date.
-    if strlen( conv string( cv_excel_date ) ) < 8.
+    if strlen( conv string( cv_excel_date ) ) < 8 and cv_excel_date is not initial.
       data(lv_date) = conv sy-datum( '19000101' ).
       data(lv_days) = cv_excel_date - 2.
 

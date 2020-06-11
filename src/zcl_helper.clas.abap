@@ -1975,9 +1975,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                   endif.
 
                   " Time field conversion to internal format
-                  if ls_excel-value ca '.'.
+                  if ls_excel-value co '.0123456789'.
                     split ls_excel-value at '.' into data(lv_i) data(lv_dec).
-                    if strlen( lv_dec ) >= 10 and lv_i = 0. " this is a time field
+                    if strlen( lv_dec ) >= 10 and lv_i = '0'. " this is a time field
                       lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_excel-value ).
                     endif.
                   endif.
@@ -2022,9 +2022,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               endif.
 
               " Time field conversion to internal format
-              if ls_excel-value ca '.'.
+              if ls_excel-value co '.0123456789'.
                 split ls_excel-value at '.' into lv_i lv_dec.
-                if strlen( lv_dec ) >= 10 and lv_i = 0. " this is a time field
+                if strlen( lv_dec ) >= 10 and lv_i = '0'. " this is a time field
                   lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_excel-value ).
                 endif.
               endif.
