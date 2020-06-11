@@ -1968,6 +1968,20 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 *        move ls_excel-col to index.
                 assign component index of structure <ls_itab> to field-symbol(<fv>).
                 if sy-subrc = 0 and <fv> is assigned. " Incase there are more xls columns than fields
+*--------------------------------------------------------------------*
+                  " Date field conversion to internal format
+                  if cl_abap_typedescr=>describe_by_data( exporting p_data = <fv> )->type_kind = cl_abap_typedescr=>typekind_date.
+                    lo_helper->excel_date_to_sap_date( changing cv_excel_date = ls_excel-value ).
+                  endif.
+
+                  " Time field conversion to internal format
+                  if ls_excel-value ca '.'.
+                    split ls_excel-value at '.' into data(lv_i) data(lv_dec).
+                    if strlen( lv_dec ) >= 10 and lv_i = 0. " this is a time field
+                      lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_excel-value ).
+                    endif.
+                  endif.
+*--------------------------------------------------------------------*
                   move ls_excel-value to <fv>.
                 endif.
               catch cx_sy_itab_line_not_found ##no_handler.
@@ -1979,6 +1993,10 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               insert <ls_itab> into table <lt_itab>.
               unassign <ls_itab>.
             endat.
+
+            clear:
+              lv_i,
+              lv_dec.
           endloop.
         endif.
       else.
@@ -1997,6 +2015,20 @@ CLASS ZCL_HELPER IMPLEMENTATION.
             move ls_excel-col to index.
             assign component index of structure <ls_itab> to <fv>.
             if sy-subrc = 0 and <fv> is assigned. " Incase there are more xls columns than fields
+*--------------------------------------------------------------------*
+              " Date field conversion to internal format
+              if cl_abap_typedescr=>describe_by_data( exporting p_data = <fv> )->type_kind = cl_abap_typedescr=>typekind_date.
+                lo_helper->excel_date_to_sap_date( changing cv_excel_date = ls_excel-value ).
+              endif.
+
+              " Time field conversion to internal format
+              if ls_excel-value ca '.'.
+                split ls_excel-value at '.' into lv_i lv_dec.
+                if strlen( lv_dec ) >= 10 and lv_i = 0. " this is a time field
+                  lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_excel-value ).
+                endif.
+              endif.
+*--------------------------------------------------------------------*
               move ls_excel-value to <fv>.
             endif.
             clear ls_excel.
@@ -2006,6 +2038,10 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               insert <ls_itab> into table <lt_itab>.
               unassign <ls_itab>.
             endat.
+
+            clear:
+              lv_i,
+              lv_dec.
           endloop.
         endif.
       endif.
@@ -2257,6 +2293,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     check is_excel is not initial.
     assign is_excel to field-symbol(<fs_excel>).
     assign is_data  to field-symbol(<fs_data>).
+
+    data(lo_helper) = new lcl_helper( ).
 
     check <fs_excel> is assigned and <fs_data> is assigned.
 

@@ -1,29 +1,6 @@
 *"* use this source file for the definition and implementation of
 *"* local helper classes, interface definitions and type
 *"* declarations
-
-define excel_time_to_sap_time.
-  data:
-    h type n length 2,
-    m type n length 2,
-    s type n length 2,
-    v_time type sy-uzeit,
-    v_num type float.
-
-  v_num = &1.
-  v_num = v_num * 24 .
-  h = floor( v_num ).
-  v_num = v_num - h.
-  v_num = v_num * 60.
-  m = floor( v_num ).
-  v_num = v_num - m.
-  v_num = v_num * 60.
-  s = v_num.
-  CONCATENATE h m s INTO v_time.
-
-  &1 = v_time.
-end-of-definition.
-
 *&---------------------------------------------------------------------*
 *& Class (Definition) lcl_helper
 *&---------------------------------------------------------------------*
@@ -220,7 +197,15 @@ class lcl_helper definition final.
           value(iv_filepath)          type string
           value(iv_contains_filename) type abap_bool
         returning
-          value(rv_valid)             type abap_bool.
+          value(rv_valid)             type abap_bool,
+
+      excel_time_to_sap_time
+        changing
+          value(cv_excel_time) type any,
+
+      excel_date_to_sap_date
+        changing
+          value(cv_excel_date) type any.
 
 *  protected section.
     " placeholder
@@ -726,12 +711,7 @@ class lcl_helper implementation.
                                             ]-style.
 
                                       if lv_style = lv_style_date.
-                                        data(lv_date) = conv sy-datum( '19000101' ).
-                                        data(lv_days) = <ls_excel>-value - 2.
-
-                                        lv_date = lv_date + lv_days.
-
-                                        <ls_excel>-value = lv_date.
+                                        excel_date_to_sap_date( changing cv_excel_date = <ls_excel>-value ).
                                       endif.
                                     endif.
                                     clear lv_column_index.
@@ -755,9 +735,7 @@ class lcl_helper implementation.
                             lv_fname,
                             lo_style,
                             lv_style_date,
-                            lv_style_time,
-                            lv_date,
-                            lv_days.
+                            lv_style_time.
 
                           unassign:
                             <ls_sheet_data>,
@@ -963,12 +941,20 @@ class lcl_helper implementation.
             endat.
             assign component ls_sheet-column of structure <ls_data> to field-symbol(<lv>).
             if sy-subrc = 0 and <lv> is assigned. " Incase there are more xls columns than fields
+*--------------------------------------------------------------------*
+              " Date field conversion to internal format
+              if cl_abap_typedescr=>describe_by_data( exporting p_data = <lv> )->type_kind = cl_abap_typedescr=>typekind_date.
+                excel_date_to_sap_date( changing cv_excel_date = ls_sheet-value ).
+              endif.
+
+              " Time field conversion to internal format
               if ls_sheet-value ca '.'.
                 split ls_sheet-value at '.' into data(lv_i) data(lv_dec).
-                if strlen( lv_dec ) = 17 and lv_i <= 1. " this is a time field
-                  excel_time_to_sap_time ls_sheet-value.
+                if strlen( lv_dec ) >= 10 and lv_i = 0. " this is a decimal time field
+                  excel_time_to_sap_time( changing cv_excel_time = ls_sheet-value ).
                 endif.
               endif.
+*--------------------------------------------------------------------*
               move ls_sheet-value to <lv>.
             endif.
             clear ls_sheet.
@@ -978,6 +964,10 @@ class lcl_helper implementation.
               insert <ls_data> into table <lt_data>.
               unassign <ls_data>.
             endat.
+
+            clear:
+              lv_i,
+              lv_dec.
           endloop.
         endif.
       endif.
@@ -1658,6 +1648,63 @@ class lcl_helper implementation.
           endif.
         when others.
       endcase.
+    endif.
+  endmethod.
+
+  method excel_time_to_sap_time.
+    data:
+      lv_h    type n length 2,
+      lv_m    type n length 2,
+      lv_s    type n length 2,
+      lv_time type sy-uzeit,
+      lv_num  type float.
+
+    clear:
+      lv_h,
+      lv_m,
+      lv_s,
+      lv_time,
+      lv_num.
+
+    lv_num = cv_excel_time.
+    lv_num = lv_num * 24 .
+    lv_h = floor( lv_num ).
+    lv_num = lv_num - lv_h.
+    lv_num = lv_num * 60.
+    lv_m = floor( lv_num ).
+    lv_num = lv_num - lv_m.
+    lv_num = lv_num * 60.
+    lv_s = lv_num.
+    concatenate lv_h lv_m lv_s into lv_time.
+
+    call function 'TIME_CHECK_PLAUSIBILITY'
+      exporting
+        time                      = lv_time " Time to be checked
+      exceptions
+        plausibility_check_failed = 1    " Time is not plausible
+        others                    = 2.
+    if sy-subrc = 0.
+      cv_excel_time = lv_time.
+*      write cv_excel_time to cv_excel_time using edit mask '__:__:__'.
+    endif.
+  endmethod.
+
+  method excel_date_to_sap_date.
+    if strlen( conv string( cv_excel_date ) ) < 8.
+      data(lv_date) = conv sy-datum( '19000101' ).
+      data(lv_days) = cv_excel_date - 2.
+
+      lv_date = lv_date + lv_days.
+
+      call function 'DATE_CHECK_PLAUSIBILITY'
+        exporting
+          date                      = lv_date " Transfer of date to be checked
+        exceptions
+          plausibility_check_failed = 1    " Date is not plausible
+          others                    = 2.
+      if sy-subrc = 0.
+        cv_excel_date = lv_date.
+      endif.
     endif.
   endmethod.
 endclass.
