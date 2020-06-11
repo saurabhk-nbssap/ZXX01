@@ -956,11 +956,8 @@ class lcl_helper implementation.
               endif.
 
               " Time field conversion to internal format
-              if ls_sheet-value co '.0123456789'.
-                split ls_sheet-value at '.' into data(lv_i) data(lv_dec).
-                if strlen( lv_dec ) >= 10 and lv_i = '0'. " this is a decimal time field
-                  excel_time_to_sap_time( changing cv_excel_time = ls_sheet-value ).
-                endif.
+              if cl_abap_typedescr=>describe_by_data( exporting p_data = <lv> )->type_kind = cl_abap_typedescr=>typekind_time.
+                excel_time_to_sap_time( changing cv_excel_time = ls_sheet-value ).
               endif.
 *--------------------------------------------------------------------*
               move ls_sheet-value to <lv>.
@@ -972,10 +969,6 @@ class lcl_helper implementation.
               insert <ls_data> into table <lt_data>.
               unassign <ls_data>.
             endat.
-
-            clear:
-              lv_i,
-              lv_dec.
           endloop.
         endif.
       endif.
@@ -1674,26 +1667,31 @@ class lcl_helper implementation.
       lv_time,
       lv_num.
 
-    lv_num = cv_excel_time.
-    lv_num = lv_num * 24 .
-    lv_h = floor( lv_num ).
-    lv_num = lv_num - lv_h.
-    lv_num = lv_num * 60.
-    lv_m = floor( lv_num ).
-    lv_num = lv_num - lv_m.
-    lv_num = lv_num * 60.
-    lv_s = lv_num.
-    concatenate lv_h lv_m lv_s into lv_time.
+    if conv string( cv_excel_time ) co '.0123456789'.
+      split conv string( cv_excel_time ) at '.' into data(lv_i) data(lv_dec).
+      if strlen( lv_dec ) >= 1 and conv i( lv_i ) <= '1'. " this is a decimal time field
+        lv_num = cv_excel_time.
+        lv_num = lv_num * 24 .
+        lv_h = floor( lv_num ).
+        lv_num = lv_num - lv_h.
+        lv_num = lv_num * 60.
+        lv_m = floor( lv_num ).
+        lv_num = lv_num - lv_m.
+        lv_num = lv_num * 60.
+        lv_s = lv_num.
+        concatenate lv_h lv_m lv_s into lv_time.
 
-    call function 'TIME_CHECK_PLAUSIBILITY'
-      exporting
-        time                      = lv_time " Time to be checked
-      exceptions
-        plausibility_check_failed = 1    " Time is not plausible
-        others                    = 2.
-    if sy-subrc = 0.
-      cv_excel_time = lv_time.
+        call function 'TIME_CHECK_PLAUSIBILITY'
+          exporting
+            time                      = lv_time " Time to be checked
+          exceptions
+            plausibility_check_failed = 1    " Time is not plausible
+            others                    = 2.
+        if sy-subrc = 0.
+          cv_excel_time = lv_time.
 *      write cv_excel_time to cv_excel_time using edit mask '__:__:__'.
+        endif.
+      endif.
     endif.
   endmethod.
 

@@ -913,6 +913,9 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     check <fs_iv> is assigned and <fs_ev> is assigned.
     <fs_iv> = iv.
 
+    data(ls_iv) = conv string( <fs_iv> ).
+    data(lo_helper) = new lcl_helper( ).
+
     if iv_mode eq 'I'.
       data(lo_elem) = cast cl_abap_elemdescr( cl_abap_typedescr=>describe_by_data( exporting p_data = <fs_iv> ) ).
       if lo_elem is bound and ( lo_elem->type_kind eq 'C' or lo_elem->type_kind eq 'g' ). " char or string
@@ -943,6 +946,14 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               endif.
             endif.
 
+            if cl_abap_typedescr=>describe_by_data( exporting p_data = <fs_ev> )->type_kind = cl_abap_typedescr=>typekind_date.
+              lo_helper->excel_date_to_sap_date( changing cv_excel_date = ls_iv ).
+              <fs_ev> = ls_iv.
+              if <fs_ev> is not initial.
+                return. " supplied input is a date, processing should end here
+              endif.
+            endif.
+
             if strlen( <fs_iv> ) eq 8 and
             ( ( count( val = <fs_iv> sub = ':' ) eq 2 ) or ( count( val = <fs_iv> sub = '.' ) eq 2 ) ).
               replace all occurrences of '.' in <fs_iv> with ':'.
@@ -964,6 +975,14 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               <fs_ev> = lv_time.
               if <fs_ev> is not initial.
                 return. " supplied input is a date, processing should end here
+              endif.
+            endif.
+
+            if cl_abap_typedescr=>describe_by_data( exporting p_data = <fs_ev> )->type_kind = cl_abap_typedescr=>typekind_time.
+              lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_iv ).
+              <fs_ev> = ls_iv.
+              if <fs_ev> is not initial.
+                return. " supplied input is a time, processing should end here
               endif.
             endif.
           catch cx_sy_range_out_of_bounds.
@@ -1975,11 +1994,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                   endif.
 
                   " Time field conversion to internal format
-                  if ls_excel-value co '.0123456789'.
-                    split ls_excel-value at '.' into data(lv_i) data(lv_dec).
-                    if strlen( lv_dec ) >= 10 and lv_i = '0'. " this is a time field
-                      lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_excel-value ).
-                    endif.
+                  if cl_abap_typedescr=>describe_by_data( exporting p_data = <fv> )->type_kind = cl_abap_typedescr=>typekind_time.
+                    lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_excel-value ).
                   endif.
 *--------------------------------------------------------------------*
                   move ls_excel-value to <fv>.
@@ -1993,10 +2009,6 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               insert <ls_itab> into table <lt_itab>.
               unassign <ls_itab>.
             endat.
-
-            clear:
-              lv_i,
-              lv_dec.
           endloop.
         endif.
       else.
@@ -2022,11 +2034,8 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               endif.
 
               " Time field conversion to internal format
-              if ls_excel-value co '.0123456789'.
-                split ls_excel-value at '.' into lv_i lv_dec.
-                if strlen( lv_dec ) >= 10 and lv_i = '0'. " this is a time field
-                  lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_excel-value ).
-                endif.
+              if cl_abap_typedescr=>describe_by_data( exporting p_data = <fv> )->type_kind = cl_abap_typedescr=>typekind_time.
+                lo_helper->excel_time_to_sap_time( changing cv_excel_time = ls_excel-value ).
               endif.
 *--------------------------------------------------------------------*
               move ls_excel-value to <fv>.
@@ -2038,10 +2047,6 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               insert <ls_itab> into table <lt_itab>.
               unassign <ls_itab>.
             endat.
-
-            clear:
-              lv_i,
-              lv_dec.
           endloop.
         endif.
       endif.
@@ -2296,140 +2301,168 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
     data(lo_helper) = new lcl_helper( ).
 
+    data(lt_comp_excel) = cast cl_abap_structdescr( cl_abap_typedescr=>describe_by_data( exporting p_data = <fs_excel> ) )->components.
+    data(lt_comp_data) = cast cl_abap_structdescr( cl_abap_typedescr=>describe_by_data( exporting p_data = <fs_data> ) )->components.
+
     check <fs_excel> is assigned and <fs_data> is assigned.
 
-    do.
-      assign component sy-index of structure <fs_excel> to field-symbol(<fs>).
-      if sy-subrc <> 0.
-        exit.
-      else.
-        data(lo_elem) = cast cl_abap_elemdescr( cl_abap_typedescr=>describe_by_data( exporting p_data = <fs> ) ).
-        if lo_elem is bound and ( lo_elem->type_kind eq 'C' or lo_elem->type_kind eq 'g' ). " char or string
-          <fs> = condense( |{ shift_left( val = <fs> sub = ' ' ) }| ).
-          try.  " for date conversion
-              if strlen( <fs> ) eq 10 and
-                ( ( count( val = <fs> sub = '.' ) eq 2 ) or ( count( val = <fs> sub = '/' ) eq 2 ) or ( count( val = <fs> sub = '-' ) eq 2 ) ).
-                replace all occurrences of '/' in <fs> with '.'.
-                replace all occurrences of '-' in <fs> with '.'.
-                data lv_date type sy-datum.
-                clear lv_date.
-                call function 'CONVERT_DATE_INPUT'
-                  exporting
-                    input                     = <fs>
-                    plausibility_check        = 'X'
-                  importing
-                    output                    = lv_date
-                  exceptions
-                    plausibility_check_failed = 1
-                    wrong_format_in_input     = 2
-                    others                    = 3.
-                if sy-subrc <> 0.
-* Implement suitable error handling here
-                endif.
-                <fs> = lv_date.
-              endif.
+    do lines( lt_comp_excel ) times.
+      try.
+          data(ls_comp_excel) = lt_comp_excel[ sy-index ].
+          data(ls_comp_data) = lt_comp_data[ name = ls_comp_excel-name ].
+          assign component ls_comp_excel-name of structure <fs_excel> to field-symbol(<fv_excel>).
+          assign component ls_comp_data-name of structure <fs_data> to field-symbol(<fv_data>).
+          if <fv_excel> is assigned and <fv_data> is assigned.
+            data(lo_elem) = cast cl_abap_elemdescr( cl_abap_typedescr=>describe_by_data( exporting p_data = <fv_excel> ) ).
+            if lo_elem is bound and ( lo_elem->type_kind eq 'C' or lo_elem->type_kind eq 'g' ). " char or string
+              <fv_excel> = condense( |{ shift_left( val = <fv_excel> sub = ' ' ) }| ).
+              try.  " for date conversion
+                  if strlen( <fv_excel> ) eq 10 and
+                    ( ( count( val = <fv_excel> sub = '.' ) eq 2 )
+                   or ( count( val = <fv_excel> sub = '/' ) eq 2 )
+                   or ( count( val = <fv_excel> sub = '-' ) eq 2 ) ).
+                    replace all occurrences of '/' in <fv_excel> with '.'.
+                    replace all occurrences of '-' in <fv_excel> with '.'.
+                    data lv_date type sy-datum.
+                    clear lv_date.
+                    call function 'CONVERT_DATE_INPUT'
+                      exporting
+                        input                     = <fv_excel>
+                        plausibility_check        = 'X'
+                      importing
+                        output                    = lv_date
+                      exceptions
+                        plausibility_check_failed = 1
+                        wrong_format_in_input     = 2
+                        others                    = 3.
+                    if sy-subrc = 0.
+                      <fv_data> = lv_date.
+                    endif.
+                  endif.
 
-              if strlen( <fs> ) eq 8 and
-                ( ( count( val = <fs> sub = ':' ) eq 2 ) or ( count( val = <fs> sub = '.' ) eq 2 ) ).
-                replace all occurrences of '.' in <fs> with ':'.
-                data lv_time type sy-uzeit.
-                clear lv_time.
-                call function 'CONVERT_TIME_INPUT'
-                  exporting
-                    input                     = <fs>
-                    plausibility_check        = abap_true
-                  importing
-                    output                    = lv_time
-                  exceptions
-                    plausibility_check_failed = 1
-                    wrong_format_in_input     = 2
-                    others                    = 3.
-                if sy-subrc <> 0.
-* Implement suitable error handling here
-                endif.
-                <fs> = lv_time.
-              endif.
-            catch cx_sy_range_out_of_bounds.
-            catch cx_sy_regex_too_complex.
-            catch cx_sy_strg_par_val.
-          endtry.
-        endif.
-      endif.
-    enddo.
+                  if <fv_data> is initial.
+                    if ls_comp_data-type_kind = cl_abap_typedescr=>typekind_date.
+                      lo_helper->excel_date_to_sap_date(
+                        changing
+                          cv_excel_date = <fv_excel> ).
+                    endif.
+                  endif.
 
-    move-corresponding <fs_excel> to <fs_data>.
+                  if strlen( <fv_excel> ) eq 8 and
+                    ( ( count( val = <fv_excel> sub = ':' ) eq 2 ) or ( count( val = <fv_excel> sub = '.' ) eq 2 ) ).
+                    replace all occurrences of '.' in <fv_excel> with ':'.
+                    data lv_time type sy-uzeit.
+                    clear lv_time.
+                    call function 'CONVERT_TIME_INPUT'
+                      exporting
+                        input                     = <fv_excel>
+                        plausibility_check        = abap_true
+                      importing
+                        output                    = lv_time
+                      exceptions
+                        plausibility_check_failed = 1
+                        wrong_format_in_input     = 2
+                        others                    = 3.
+                    if sy-subrc = 0.
+                      <fv_data> = lv_time.
+                    endif.
+                  endif.
 
-    unassign <fs>.
-    do.
-      assign component sy-index of structure <fs_data> to <fs>.
-      if sy-subrc <> 0.
-        exit.
-      else.
-        if <fs> is assigned and <fs> is not initial.
-          data(lo_type) = cl_abap_typedescr=>describe_by_data( p_data = <fs> ).
-
-          if lo_type is bound.
-            data(lv_relative_name) = lo_type->get_relative_name( ).
-
-            if lv_relative_name is not initial.
-              data: lv_data_element type dd04l-rollname.
-              clear: lv_data_element.
-              move lv_relative_name to lv_data_element.
-              select single *
-                from dd04l
-                into @data(wa_dd04l)
-                where rollname = @lv_data_element.
-
-              if wa_dd04l-convexit is not initial.
-                concatenate 'CONVERSION_EXIT_' wa_dd04l-convexit '_INPUT' into data(lv_function).
-
-                call function 'FUNCTION_EXISTS'
-                  exporting
-                    funcname           = conv rs38l-name( lv_function )
-                  exceptions
-                    function_not_exist = 1
-                    others             = 2.
-                if sy-subrc = 0.
-                  try.
-                      call function lv_function
-                        exporting
-                          input  = <fs>
-                        importing
-                          output = <fs>.
-                    catch cx_sy_dyn_call_illegal_func.
-                      " catch-block
-                  endtry.
-                endif.
-              endif.
+                  if <fv_data> is initial.
+                    if ls_comp_data-type_kind = cl_abap_typedescr=>typekind_time.
+                      lo_helper->excel_time_to_sap_time(
+                        changing
+                          cv_excel_time = <fv_excel> ).
+                    endif.
+                  endif.
+                catch cx_sy_range_out_of_bounds.
+                catch cx_sy_regex_too_complex.
+                catch cx_sy_strg_par_val.
+              endtry.
             endif.
-            " fail safety date conversion - albeit redundant
-            free lo_elem.
-            lo_elem = cast cl_abap_elemdescr( lo_type ).
-            if lo_elem is bound and lo_elem->type_kind eq 'D'.
-              assign component sy-index of structure <fs_excel> to field-symbol(<fs_date>).
-              if sy-subrc = 0 and <fs_date> is assigned and <fs_date> is not initial.
-                call function 'CONVERT_DATE_TO_INTERNAL'
-                  exporting
-                    date_external            = <fs_date>
-                    accept_initial_date      = abap_false
-                  importing
-                    date_internal            = <fs>
-                  exceptions
-                    date_external_is_invalid = 1
-                    others                   = 2.
-                if sy-subrc <> 0.
-* Implement suitable error handling here
+
+            if <fv_data> is initial.
+              <fv_data> = <fv_excel>.
+            endif.
+
+            data(lo_type) = cl_abap_typedescr=>describe_by_data( p_data = <fv_data> ).
+
+            if lo_type is bound.
+              data(lv_relative_name) = lo_type->get_relative_name( ).
+
+              if lv_relative_name is not initial.
+                data: lv_data_element type dd04l-rollname.
+                clear: lv_data_element.
+                move lv_relative_name to lv_data_element.
+                select single *
+                  from dd04l
+                  into @data(wa_dd04l)
+                  where rollname = @lv_data_element.
+
+                if wa_dd04l-convexit is not initial.
+                  concatenate 'CONVERSION_EXIT_' wa_dd04l-convexit '_INPUT' into data(lv_function).
+
+                  call function 'FUNCTION_EXISTS'
+                    exporting
+                      funcname           = conv rs38l-name( lv_function )
+                    exceptions
+                      function_not_exist = 1
+                      others             = 2.
+                  if sy-subrc = 0.
+                    try.
+                        call function lv_function
+                          exporting
+                            input  = <fv_data>
+                          importing
+                            output = <fv_data>.
+                      catch cx_sy_dyn_call_illegal_func.
+                        " catch-block
+                    endtry.
+                  endif.
                 endif.
-                unassign <fs_excel>.
+              endif.
+              " fail safety date conversion - albeit redundant
+              free lo_elem.
+              lo_elem = cast cl_abap_elemdescr( lo_type ).
+              if lo_elem is bound and lo_elem->type_kind eq 'D'.
+                assign component ls_comp_excel-name of structure <fs_excel> to field-symbol(<fv_date>).
+                if sy-subrc = 0 and <fv_date> is assigned and <fv_date> is not initial and <fv_data> is initial.
+                  call function 'CONVERT_DATE_TO_INTERNAL'
+                    exporting
+                      date_external            = <fv_date>
+                      accept_initial_date      = abap_false
+                    importing
+                      date_internal            = <fv_data>
+                    exceptions
+                      date_external_is_invalid = 1
+                      others                   = 2.
+                  if sy-subrc <> 0.
+* Implement suitable error handling here
+                  endif.
+                endif.
               endif.
             endif.
           endif.
-        endif.
-      endif.
-      unassign: <fs>, <fs_date>.
-      free: lo_type.
-      clear: lv_function, lv_relative_name, lv_data_element, wa_dd04l.
+
+          unassign:
+            <fv_excel>,
+            <fv_data>,
+            <fv_date>.
+
+          free lo_type.
+
+          clear:
+            lv_function,
+            lv_relative_name,
+            lv_data_element,
+            wa_dd04l.
+        catch cx_sy_itab_line_not_found ##no_handler.
+      endtry.
     enddo.
+
+    if <fs_data> is not initial.
+      <fs_excel> = corresponding #( <fs_data> ).
+    endif.
   endmethod.
 
 
