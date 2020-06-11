@@ -37,6 +37,48 @@ class lcl_helper definition final.
 *      sender table
            ty_t_sender type table of ty_s_senderline.
 *
+    types:
+      begin of gty_s_cell,
+        position      type string,
+        value         type string,
+        index         type i,
+        style         type i,
+        sharedstring  type string,
+        output_colnum type i,
+      end of gty_s_cell .
+    types:
+      gty_t_cells type standard table of gty_s_cell with non-unique key position initial size 1 .
+
+    types: begin of gty_s_col,
+             position    type i,
+             customwidth type i,
+             style       type i,
+             width       type string,
+             max         type i,
+             min         type i,
+             hidden      type i,
+             bestfit     type i,
+           end of gty_s_col.
+
+    types:
+      begin of gty_s_row,
+        spans     type string,
+        position  type i,
+        cells_tab type gty_t_cells,
+      end of gty_s_row .
+
+    types:
+     gty_t_cols type standard table of gty_s_col with non-unique key position initial size 1 .
+    types:
+     gty_t_rows type standard table of gty_s_row with non-unique key position initial size 1 .
+    types:
+      begin of gty_s_sheet,
+        dim       type string,
+        cols_tab  type gty_t_cols,
+        rows_tab  type gty_t_rows,
+        table_rid type string,
+      end of gty_s_sheet .
+
     constants: gc_esc type c length 1 value '"'.
 
     methods:
@@ -498,6 +540,8 @@ class lcl_helper implementation.
       rt_excel,
       et_sheets.
 
+    field-symbols <ls_sheet_data> type gty_s_sheet.
+
     data(lt_excel) = rt_excel.
 
     if iv_filename is not initial.
@@ -603,6 +647,12 @@ class lcl_helper implementation.
                                              exporting
                                                iv_sheet_id = lines( lt_sheet_info ) - ( ls_sheet_info-sheet_id - 1 ) ).
                           if lo_sheet is bound.
+
+                            data(lo) = cast object( lo_sheet ).
+
+                            data(lv_fname) = 'MS_SHEET_DATA'.
+                            assign lo->(lv_fname) to field-symbol(<lt>).
+
                             " all sheets table
                             append initial line to et_sheets assigning field-symbol(<ls_sheet>).
                             if <ls_sheet> is assigned.
