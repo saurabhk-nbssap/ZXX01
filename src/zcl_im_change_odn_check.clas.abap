@@ -38,17 +38,23 @@ CLASS ZCL_IM_CHANGE_ODN_CHECK IMPLEMENTATION.
             into @data(lv_registered).
 
           if lv_registered = abap_true. " registered vendor
-            data(ls_bset) = i_bset[ 1 ].
+*            data(ls_bset) = i_bset[ 1 ].
 
-            " IHDK907381 - FI: S_K: ZN/ZO RCM ODN: Chng RCM detection method: 15.7.20
-            select single @abap_true
-              from j_1iexcdefn
-              where kalsm = 'ZTXINN'
-              and   kschl = @ls_bset-kschl
-              and   cond_name in ('CGSTRCMAP', 'IGSTRCMAP',
-                                  'IGSTRCMINV', 'CGSTRCMINV')
-              into @data(lv_rcm_tax_code).
+            loop at i_bset[] into data(ls_bset) where kschl is not initial. " IHDK907383
+              " IHDK907381 - FI: S_K: ZN/ZO RCM ODN: Chng RCM detection method: 15.7.20
+              select single @abap_true
+                from j_1iexcdefn
+                where kalsm = 'ZTXINN'
+                and   kschl = @ls_bset-kschl
+                and   cond_name in ('CGSTRCMAP', 'IGSTRCMAP',
+                                    'IGSTRCMINV', 'CGSTRCMINV')
+                into @data(lv_rcm_tax_code).
 
+              clear ls_bset.
+              if lv_rcm_tax_code = abap_true.
+                exit.
+              endif.
+            endloop.
 *            select single @abap_true
 *              from t007s as a
 *              inner join t007a as b
