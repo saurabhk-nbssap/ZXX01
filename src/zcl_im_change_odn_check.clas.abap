@@ -40,17 +40,27 @@ CLASS ZCL_IM_CHANGE_ODN_CHECK IMPLEMENTATION.
           if lv_registered = abap_true. " registered vendor
             data(ls_bset) = i_bset[ 1 ].
 
+            " IHDK907381 - FI: S_K: ZN/ZO RCM ODN: Chng RCM detection method: 15.7.20
             select single @abap_true
-              from t007s as a
-              inner join t007a as b
-              on  a~kalsm = b~kalsm
-              and a~mwskz = b~mwskz
-              where a~spras = @sy-langu
-              and   a~kalsm = 'ZTXINN'    " GST tax procedure
-              and   a~mwskz = @ls_bset-mwskz
-              and   a~text1 like '%RCM%'
-              and   b~mwart = 'V'   " Input tax code
+              from j_1iexcdefn
+              where kalsm = 'ZTXINN'
+              and   kschl = @ls_bset-kschl
+              and   cond_name in ('CGSTRCMAP', 'IGSTRCMAP',
+                                  'IGSTRCMINV', 'CGSTRCMINV')
               into @data(lv_rcm_tax_code).
+
+*            select single @abap_true
+*              from t007s as a
+*              inner join t007a as b
+*              on  a~kalsm = b~kalsm
+*              and a~mwskz = b~mwskz
+*              where a~spras = @sy-langu
+*              and   a~kalsm = 'ZTXINN'    " GST tax procedure
+*              and   a~mwskz = @ls_bset-mwskz
+*              and   a~text1 like '%RCM%'
+*              and   b~mwart = 'V'   " Input tax code
+*              into @data(lv_rcm_tax_code).
+            " End IHDK907381
 
             if lv_rcm_tax_code = abap_true. " rcm tax code
               c_supply_type = '1'.    " Vendor
