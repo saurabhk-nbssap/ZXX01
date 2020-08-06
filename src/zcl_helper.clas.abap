@@ -58,13 +58,12 @@ public section.
       windows type c length 1 value '\',
       unix    type c length 1 value '/',
     end of gc_path_sep .
-
   constants:
     begin of gc_extension,
       xls  type c length 3 value 'XLS',
       xlsx type c length 4 value 'XLSX',
       bin  type c length 3 value 'BIN',
-    end of gc_extension.
+    end of gc_extension .
 
   class-methods XML_TO_ABAP
     importing
@@ -262,6 +261,9 @@ public section.
     exporting
       value(ET_LVC_FCAT) type LVC_T_FCAT
       value(ET_SLIS_FCAT) type SLIS_T_FIELDCAT_ALV .
+  class-methods SIMPLE_SALV_DISPLAY
+    importing
+      value(IT_TABLE) type STANDARD TABLE .
 protected section.
 private section.
 
@@ -3076,6 +3078,80 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     check cv_text is not initial.
     replace all occurrences of regex '[^a-zA-Z0-9 ]' in cv_text with ''.
     condense cv_text.
+  endmethod.
+
+
+  method simple_salv_display.
+    check it_table is not initial.
+
+    field-symbols <lt_table> type standard table.
+    unassign <lt_table>.
+    assign it_table to <lt_table>.
+    if <lt_table> is assigned.
+      try.
+          cl_salv_table=>factory(
+*           exporting
+*             list_display   = if_salv_c_bool_sap=>false " ALV Displayed in List Mode
+            importing
+              r_salv_table   = data(lo_alv)              " Basis Class Simple ALV Tables
+            changing
+              t_table        = <lt_table> ).
+
+          if lo_alv is bound.
+            data(lo_columns) = lo_alv->get_columns( ).
+            if lo_columns is bound.
+              try.
+                  data(lo_column) = lo_columns->get_column( exporting columnname = 'MANDT' ).
+                  if lo_column is bound.
+                    lo_column->set_technical( exporting value = if_salv_c_bool_sap=>true ).
+                  endif.
+                catch cx_salv_not_found ##no_handler. " ALV: General Error Class (Checked During Syntax Check)
+              endtry.
+
+              data(lt_col) = lo_columns->get( ).
+
+              if lt_col is not initial.
+                loop at lt_col into data(ls_col).
+                  translate ls_col-columnname using '_ '.
+                  ls_col-columnname = to_mixed( ls_col-columnname ).
+                  if ls_col-r_column->get_long_text( ) is initial.
+                    ls_col-r_column->set_long_text( exporting value = conv #( ls_col-columnname ) ).
+                  endif.
+                  if ls_col-r_column->get_medium_text( ) is initial.
+                    ls_col-r_column->set_medium_text( exporting value = conv #( ls_col-columnname ) ).
+                  endif.
+                  if ls_col-r_column->get_short_text( ) is initial.
+                    ls_col-r_column->set_short_text( exporting value = conv #( ls_col-columnname ) ).
+                  endif.
+                  ls_col-r_column->set_output_length( exporting value = conv #( strlen( ls_col-columnname ) ) ).
+
+                  clear ls_col.
+                endloop.
+              endif.
+
+              lo_columns->set_optimize( exporting value = if_salv_c_bool_sap=>true ).
+            endif.
+
+            lo_alv->get_functions( )->set_all( exporting value = if_salv_c_bool_sap=>true ).
+            lo_alv->get_display_settings( )->set_striped_pattern( exporting value = abap_true ).
+
+            data(lo_layout) = lo_alv->get_layout( ).
+
+            data(lo_key) = value salv_s_layout_key( report = sy-repid ).
+
+            if lo_layout is bound.
+              lo_layout->set_key( exporting value = lo_key ).
+
+              lo_layout->set_save_restriction( exporting value = cl_salv_layout=>restrict_none ).
+
+              lo_layout->set_default( exporting value = if_salv_c_bool_sap=>true ).
+            endif.
+
+            lo_alv->display( ).
+          endif.
+        catch cx_salv_msg ##no_handler. " ALV: General Error Class with Message
+      endtry.
+    endif.
   endmethod.
 
 
