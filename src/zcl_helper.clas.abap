@@ -264,6 +264,9 @@ public section.
   class-methods SIMPLE_SALV_DISPLAY
     importing
       value(IT_TABLE) type STANDARD TABLE .
+  class-methods GET_BGRFC_UNIT
+    returning
+      value(RO_UNIT) type ref to IF_TRFC_UNIT_OUTBOUND .
 protected section.
 private section.
 
@@ -2464,6 +2467,41 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
     if <fs_data> is not initial.
       <fs_excel> = corresponding #( <fs_data> ).
+    endif.
+  endmethod.
+
+
+  method get_bgrfc_unit.
+    " RFCDEST must exist in table RFCDES / SM59 - ABAP Connections
+    " One destination must physically exist in each server (DEV, QA & PRD)
+    " Following setup must be used in each system separately
+    " a. Name it as ZZ(SY-SYSID)_BGRFC -> For sake of uniformity
+    " b. In description add: DO NOT DELETE THIS DESTINATION PLEASE --> so that it is not tampered with unknowingly
+    " c. In logon & security tab: 1. language = '' 2. client = '' 3. current user = 'X' 4. Trust relationship = 'Yes'
+    " d. In special options tab: under select protocols section: qRFC version = 1 bgRGC, Serializer = C classic
+    " Set the FM as RFC enabled
+    " Do not use commit/rollback work
+    " Do not add exporting or changing parameters
+    " Do not use "wait up to X seconds" in BUNIT FM's --> SYSTEM_ILLEGAL_STATEMENT runtime error occurs
+
+    clear ro_unit.
+    free ro_unit.
+
+    data(lv_rfcdest) = conv rfcdest( cond #( when is_development( ) then 'ZZIHD_BGRFC'
+                                             when is_quality( )     then 'ZZIHQ_BGRFC'
+                                             when is_production( )  then 'ZZIHP_BGRFC'
+                                             when is_sandbox( )     then 'ZZSBX_BGRFC' ) ).
+
+    if lv_rfcdest is not initial.
+* Create the destination object references
+      try.
+          data(lo_rfcdest) = cl_bgrfc_destination_outbound=>create( exporting dest_name = lv_rfcdest ).
+          if lo_rfcdest is bound.
+            ro_unit = lo_rfcdest->create_trfc_unit( ).
+          endif.
+        catch cx_bgrfc_invalid_destination into data(lox_bgrfc_invalid_destination).
+*          message e103(bgrfc) with lv_rfcdest.
+      endtry.
     endif.
   endmethod.
 
