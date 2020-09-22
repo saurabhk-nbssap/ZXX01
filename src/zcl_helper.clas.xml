@@ -143,6 +143,12 @@
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>GET_IRN_QRCODE</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Get E-Invoice/IRN QR code data for QR code print in SSF</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
      <CMPNAME>GET_MANAGER_EMP_ID</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Requires Employee ID; Returns Manager Employee ID</DESCRIPT>

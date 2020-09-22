@@ -267,6 +267,24 @@ public section.
   class-methods GET_BGRFC_UNIT
     returning
       value(RO_UNIT) type ref to IF_TRFC_UNIT_OUTBOUND .
+  class-methods GET_IRN_QRCODE
+    importing
+      value(IV_COMP_CODE) type ZEI_DET_COMPANY_CODE optional
+      value(IV_DOCUMENT) type ZEI_DET_CUSTOM1 optional
+      value(IV_FIS_YEAR) type GJAHR optional
+      value(IV_ODN_NUMBER) type ZEI_DET_DOCUMENT optional
+      value(IV_ODN_DATE) type ZEI_DET_DOC_DATE optional
+    exporting
+      value(RV_QR10) type CHAR255
+      value(RV_QR1) type CHAR255
+      value(RV_QR2) type CHAR255
+      value(RV_QR3) type CHAR255
+      value(RV_QR4) type CHAR255
+      value(RV_QR5) type CHAR255
+      value(RV_QR6) type CHAR255
+      value(RV_QR7) type CHAR255
+      value(RV_QR8) type CHAR255
+      value(RV_QR9) type CHAR255 .
 protected section.
 private section.
 
@@ -2611,6 +2629,121 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     read table progtab into name index 1.
     name = to_upper( name ).
 *}   INSERT
+  endmethod.
+
+
+  method get_irn_qrcode.
+*--------------------------------------------------------------------*
+    " IHDK908270: SD: S_K: E-INV: QR Code Print: 22.9.20
+*--------------------------------------------------------------------*
+    clear:
+      rv_qr1,
+      rv_qr2,
+      rv_qr3,
+      rv_qr4,
+      rv_qr5,
+      rv_qr6,
+      rv_qr7,
+      rv_qr8,
+      rv_qr9,
+      rv_qr10.
+
+    data:
+      r_comp_code like range of iv_comp_code,   " bukrs
+      r_document  like range of iv_document,    " vbeln, belnr
+      r_fis_year  like range of iv_fis_year,    " gjahr
+      r_odn_num   like range of iv_odn_number,  " xblnr/odn
+      r_odn_date  like range of iv_odn_date.    " odn date/document date
+
+    clear:
+      r_comp_code[], r_comp_code,
+      r_document[], r_document,
+      r_fis_year[], r_fis_year,
+      r_odn_num[], r_odn_num,
+      r_odn_date[], r_odn_date.
+
+    check iv_comp_code is not initial
+      or iv_document is not initial
+      or iv_fis_year is not initial
+      or iv_odn_number is not initial
+      or iv_odn_date is not initial.
+
+    if iv_comp_code is not initial.
+      r_comp_code = value #( ( sign = 'I' option = 'EQ' low = iv_comp_code ) ).
+    endif.
+
+    if iv_document is not initial.
+      r_document = value #( ( sign = 'I' option = 'EQ' low = iv_document ) ).
+    endif.
+
+    if iv_fis_year is not initial.
+      r_fis_year = value #( ( sign = 'I' option = 'EQ' low = iv_fis_year ) ).
+    endif.
+
+    if iv_odn_number is not initial.
+      r_odn_num = value #( ( sign = 'I' option = 'EQ' low = iv_odn_number ) ).
+    endif.
+
+    if iv_odn_date is not initial.
+      r_odn_date = value #( ( sign = 'I' option = 'EQ' low = iv_odn_date ) ).
+    endif.
+
+    select single signedqrcode
+      from zei_api_global
+      where company_code in @r_comp_code[]
+      and   custom1 in @r_document[]
+      and   fiscal_year in @r_fis_year[]
+      and   documentnumber in @r_odn_num[]
+      and   documentdate in @r_odn_date[]
+      into @data(lv_signed_qr).
+
+    if lv_signed_qr is not initial.
+      data:
+        lv_input_string      type string,
+        lt_string_components type standard table of swastrtab.
+
+      constants lc_max_component_length type i value '255'.
+
+      clear:
+        lv_input_string,
+        lt_string_components.
+
+      lv_input_string = lv_signed_qr.
+
+      call function 'SWA_STRING_SPLIT'
+        exporting
+          input_string                 = lv_input_string
+          max_component_length         = lc_max_component_length
+        tables
+          string_components            = lt_string_components
+        exceptions
+          max_component_length_invalid = 1
+          others                       = 2.
+      if sy-subrc <> 0.
+* Implement suitable error handling here
+      endif.
+
+      define get_qr_data.
+        try.
+            &1 = lt_string_components[ &2 ]-str.
+          catch cx_sy_itab_line_not_found ##no_handler.
+        endtry.
+      end-of-definition.
+
+      if lt_string_components is not initial.
+        get_qr_data rv_qr1 1.
+        get_qr_data rv_qr2 2.
+        get_qr_data rv_qr3 3.
+        get_qr_data rv_qr4 4.
+        get_qr_data rv_qr5 5.
+        get_qr_data rv_qr6 6.
+        get_qr_data rv_qr7 7.
+        get_qr_data rv_qr8 8.
+        get_qr_data rv_qr9 9.
+        get_qr_data rv_qr10 10.
+      endif.
+
+    endif.
   endmethod.
 
 
