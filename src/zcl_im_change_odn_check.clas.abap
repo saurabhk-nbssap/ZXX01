@@ -76,5 +76,10 @@ CLASS ZCL_IM_CHANGE_ODN_CHECK IMPLEMENTATION.
         catch cx_sy_itab_line_not_found ##no_handler.
       endtry.
     endif.
+    " IHDK908388: FI: S_K: Force ODN for ZT/ZU for all vendors: 25.9.20
+    if i_bkpf-blart = 'ZT' or i_bkpf-blart = 'ZU'.
+      c_supply_type = '1'.    " Vendor
+      c_odn_flag = abap_true. " tell the system to generate ODN
+    endif.
   endmethod.
 ENDCLASS.
