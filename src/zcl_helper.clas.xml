@@ -191,6 +191,12 @@
     </SEOCOMPOTX>
     <SEOCOMPOTX>
      <CLSNAME>ZCL_HELPER</CLSNAME>
+     <CMPNAME>ITAB_TO_HTML</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>Convert internal table to HTML format</DESCRIPT>
+    </SEOCOMPOTX>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_HELPER</CLSNAME>
      <CMPNAME>PRINT_NO_PG_BRK</CMPNAME>
      <LANGU>E</LANGU>
      <DESCRIPT>Print ALV data in spool output without page breaks</DESCRIPT>

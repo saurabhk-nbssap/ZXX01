@@ -285,6 +285,11 @@ public section.
       value(RV_QR7) type CHAR255
       value(RV_QR8) type CHAR255
       value(RV_QR9) type CHAR255 .
+  class-methods ITAB_TO_HTML
+    importing
+      value(IT_TABLE) type STANDARD TABLE
+    returning
+      value(RV_HTML) type STRING .
 protected section.
 private section.
 
@@ -3047,6 +3052,58 @@ CLASS ZCL_HELPER IMPLEMENTATION.
       endif.
     endif.
 *    endif.
+  endmethod.
+
+
+  method itab_to_html.
+    clear rv_html.
+
+    " easiest/most efficient way of converting an internal table to HTML
+    check it_table[] is not initial.
+    try.
+        cl_salv_table=>factory(
+          importing
+            r_salv_table = data(lo_alv)
+          changing
+            t_table      = it_table[] ).
+      catch cx_salv_msg.                                "#EC NO_HANDLER
+    endtry.
+
+    check lo_alv is bound.
+    data(lo_columns) = lo_alv->get_columns( ).
+
+    if lo_columns is bound.
+      lo_columns->set_optimize( exporting value = if_salv_c_bool_sap=>true ).
+    endif.
+
+    " get alv in html xml format
+    data(lv_xml) = lo_alv->to_xml(
+                    exporting
+                      xml_type = if_salv_bs_xml=>c_type_mhtml
+                      xml_flavour = if_salv_bs_c_tt=>c_tt_xml_flavour_export ).
+
+    " convert xstring xml to string html
+    rv_html = cl_bcs_convert=>xstring_to_string( exporting iv_xstr = lv_xml iv_cp = '1101' ).  " 1101 - US-ASCII
+
+    " keep shifting string to the left till first < is encountered which marks the beginning of html document "<html>"
+    " all text to the left of <html> is superflous; needs to be removed
+    do.
+      if rv_html+0(1) ne '<'.
+        shift rv_html.
+      else.
+        exit.
+      endif.
+    enddo.
+
+*    data(lv_mime_text) = |MIME-Version: 1.0 X-Document-Type: Worksheet Content-Type: multipart/related; | &&
+*      |boundary="----=_NextPart_01C5084F.FEF9A7A0" ------=_NextPart_01C5084F.FEF9A7A0 Content-Location: | &&
+*      |file:///C:/Mappe1.htm Content-Transfer-Encoding: text/html Content-Type: text/html; charset="utf-8"|.
+
+*    replace all occurrences of lv_mime_text in lv_html with ''.
+
+*    clear lv_mime_text.
+    data(lv_mime_text) = |------=_NextPart_01C5084F.FEF9A7A0--|.  " some redundant text at the end of the html code; needs to be removed
+    replace all occurrences of lv_mime_text in rv_html with ''.
   endmethod.
 
 
