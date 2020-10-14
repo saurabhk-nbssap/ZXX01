@@ -882,24 +882,35 @@ CLASS ZCL_HELPER IMPLEMENTATION.
 
   method clear_x_fields.
     check cs_data is not initial.
+    field-symbols: <flt> type any table.
     constants: lc_x_type type string value 'BAPIUPDATE'.
 
-    assign cs_data to field-symbol(<fs_data>).
-    data(lt_component) = cast cl_abap_structdescr( cl_abap_typedescr=>describe_by_data( exporting p_data = <fs_data> ) )->components[].
-    do lines( lt_component ) times.
-      try.
-          assign component lt_component[ sy-index ]-name of structure <fs_data> to field-symbol(<fv>).
-          if <fv> is assigned and <fv> is not initial.
-            if cl_abap_typedescr=>describe_by_data( exporting p_data = <fv> )->get_relative_name( ) eq lc_x_type and <fv> eq abap_true.
-              clear <fv>.
+    case type of cl_abap_typedescr=>describe_by_data( exporting p_data = cs_data ).
+      when type cl_abap_elemdescr into data(lo_elemdescr).
+        if lo_elemdescr->type_kind = cl_abap_typedescr=>typekind_char
+          and lo_elemdescr->get_relative_name( ) = lc_x_type.
+          clear cs_data.
+        endif.
+      when type cl_abap_structdescr into data(lo_structdescr).
+        if lo_structdescr->type_kind = cl_abap_typedescr=>typekind_struct1
+          or lo_structdescr->type_kind = cl_abap_typedescr=>typekind_struct2.
+          do.
+            assign component sy-index of structure cs_data to field-symbol(<fs>).
+            if sy-subrc <> 0.
+              exit.
             endif.
-          endif.
-        catch cx_sy_itab_line_not_found.
-      endtry.
-      unassign <fv>.
-    enddo.
-    refresh: lt_component.
-    unassign: <fs_data>.
+            clear_x_fields( changing cs_data = <fs> ).
+          enddo.
+        endif.
+      when type cl_abap_tabledescr into data(lo_tabledescr).
+        if lo_tabledescr->type_kind = cl_abap_typedescr=>typekind_table.
+          assign cs_data to <flt>.
+          loop at <flt> assigning field-symbol(<fls>).
+            clear_x_fields( changing cs_data = <fls> ).
+          endloop.
+        endif.
+      when others.
+    endcase.
   endmethod.
 
 
@@ -908,7 +919,10 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     check cs_data is not initial.
 
     data(lo_descr) = cl_abap_typedescr=>describe_by_data( exporting p_data  = cs_data ).
-    if lo_descr->type_kind eq cl_abap_typedescr=>typekind_char.
+    if lo_descr->type_kind eq cl_abap_typedescr=>typekind_char
+      or lo_descr->type_kind = cl_abap_typedescr=>typekind_string
+      or lo_descr->type_kind = cl_abap_typedescr=>typekind_clike
+      or lo_descr->type_kind = cl_abap_typedescr=>typekind_csequence.
       cs_data = condense( cs_data ).
       cs_data = shift_left( val = cs_data sub = ' ' ).
     endif.
