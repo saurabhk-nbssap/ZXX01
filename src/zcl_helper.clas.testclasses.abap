@@ -1,7 +1,7 @@
 *"* use this source file for your ABAP unit test classes
 
 class ltcl_file_io definition for testing
-  duration short
+  duration medium
   risk level harmless.
 *?﻿<asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
 *?<asx:values>
@@ -107,7 +107,7 @@ class ltcl_file_io implementation.
       using client '300'
       where mtart = 'ZFGM'
       into table @mt_mara
-      up to 100 rows.
+      up to 10 rows.
 
     if mt_mara is not initial.
       select *
