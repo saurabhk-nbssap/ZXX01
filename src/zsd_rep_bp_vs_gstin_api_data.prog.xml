@@ -49,9 +49,21 @@
     </item>
     <item>
      <ID>S</ID>
-     <KEY>S_ACCGRP</KEY>
+     <KEY>S_COMP</KEY>
+     <ENTRY>Company Code</ENTRY>
+     <LENGTH>20</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>S_CUSACC</KEY>
      <ENTRY>Customer Account Group</ENTRY>
      <LENGTH>30</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>S_CUSGST</KEY>
+     <ENTRY>Customer GST Number</ENTRY>
+     <LENGTH>27</LENGTH>
     </item>
     <item>
      <ID>S</ID>
@@ -73,15 +85,33 @@
     </item>
     <item>
      <ID>S</ID>
-     <KEY>S_GSTIN</KEY>
-     <ENTRY>GST Number</ENTRY>
-     <LENGTH>18</LENGTH>
+     <KEY>S_PORG</KEY>
+     <ENTRY>Purchasing Organisation</ENTRY>
+     <LENGTH>31</LENGTH>
     </item>
     <item>
      <ID>S</ID>
      <KEY>S_SORG</KEY>
      <ENTRY>Sales Organization</ENTRY>
      <LENGTH>26</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>S_VENACC</KEY>
+     <ENTRY>Vendor Account Group</ENTRY>
+     <LENGTH>28</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>S_VEND</KEY>
+     <ENTRY>Vendor</ENTRY>
+     <LENGTH>14</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>S_VENGST</KEY>
+     <ENTRY>Vendor GST Number</ENTRY>
+     <LENGTH>25</LENGTH>
     </item>
    </TPOOL>
   </asx:values>
