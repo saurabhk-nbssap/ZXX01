@@ -359,6 +359,9 @@ class lcl_app implementation.
               message id 'Z_BUPA' type 'E' number '000'
                 with |GSTIN Check: Status: { lv_gstin_status }| into <ls_data>-gstin_status.
             else. " for active cases
+              <ls_data>-gstin_status = lv_gstin_status.
+              <ls_data>-api_state = ls_gstin_info-data-pradr-addr-stcd.
+
               " title check - to be implemented
               if strlen( <ls_data>-title ) <> 4 or <ls_data>-title cn '0123456789'.
                 " title description is provided - get the code for the query below
