@@ -153,6 +153,7 @@ class lcl_app implementation.
         name_status    type string,
         pincode        type pstlz,
         pincode_status type string,
+        state_code     type regio,
         state          type bezei,
         api_state      type string,
         state_status   type string,
@@ -171,6 +172,7 @@ class lcl_app implementation.
           upper( a~anred ) as title,
           upper( a~name1 ) as name,
           a~pstlz as pincode,
+          a~regio as state_code,
           upper( d~bezei ) as state
           from kna1 as a
           inner join knb1 as b
@@ -182,6 +184,8 @@ class lcl_app implementation.
           where a~kunnr in @s_cust[]
           and   a~ktokd in @s_cusacc[]
           and   a~stcd3 in @s_cusgst
+          and   a~land1 = 'IN'
+          and   a~regio <> 'Z1'  " Exlcude SEZ vendors
           and   b~bukrs in @s_cuscmp[]
           and   c~vkorg in @s_sorg[]
           and   c~vtweg in @s_dchnl[]
@@ -198,6 +202,7 @@ class lcl_app implementation.
           upper( a~anred ) as title,
           upper( a~name1 ) as name,
           a~pstlz as pincode,
+          a~regio as state_code,
           upper( d~bezei ) as state
           from lfa1 as a
           inner join lfb1 as b
@@ -207,8 +212,10 @@ class lcl_app implementation.
           inner join t005u as d
           on a~regio = d~bland
           where a~lifnr in @s_vend[]
-          and   a~ktokk in @s_venacc[]
+          and   ( a~ktokk in @s_venacc[] and a~ktokk <> 'EMPL' )
           and   a~stcd3 in @s_vengst
+          and   a~ven_class = ''
+          and   a~land1 = 'IN' " registered
           and   b~bukrs in @s_vencmp[]
           and   c~ekorg in @s_porg[]
           and   d~spras = @sy-langu
@@ -229,141 +236,71 @@ class lcl_app implementation.
             if lv_validation_active = abap_true.
               if <ls_data>-cus_ven is initial.
                 raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '000'
-                  with 'Business partner is a mandarory input'. " invalid input combination
+                  with 'Customer/Vendor is a mandarory input'.
+                . " invalid input combination
               endif.
 
-              data(lv_customer) = conv kunnr( |{  iv_entity alpha = in }| ).
-              data(lv_vendor) = conv lifnr( |{ iv_entity alpha = in }| ).
+              if <ls_data>-cus_ven is not initial.
+                case abap_true.
+                  when r_cus.
+                    data(lv_customer) = conv kunnr( |{  <ls_data>-cus_ven alpha = in }| ).
+                  when r_ven.
+                    data(lv_vendor) = conv lifnr( |{ <ls_data>-cus_ven alpha = in }| ).
+                endcase.
+              endif.
 
-              if iv_entity is not initial.
+              if <ls_data>-cus_ven is not initial and lv_customer is initial and lv_vendor is initial.
+                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '002'. " invalid entity
+              endif.
+
+              if lv_customer is not initial.
                 select single @abap_true
-                  from kna1
-                  into @data(lv_is_customer)
-                  where kunnr = @lv_customer.
+                  from z6mma_params
+                  where progname = 'GSTNO_VAL_CUST'
+                  and   active_flag = @abap_true
+                  into @data(lv_cust_active).
 
-                if lv_is_customer ne abap_true.
-                  clear lv_customer.
+                if lv_cust_active = abap_false.
+                  <ls_data>-message = 'Validation is not active'.
+                  continue.
                 endif.
+              endif.
 
+              if lv_vendor is not initial.
                 select single @abap_true
-                   from lfa1
-                   into @data(lv_is_vendor)
-                   where lifnr = @lv_vendor.
+                  from z6mma_params
+                  where progname = 'GSTNO_VAL_VEND'
+                  and   active_flag = @abap_true
+                  into @data(lv_vend_active).
 
-                if lv_is_vendor ne abap_true.
-                  clear lv_vendor.
-                endif.
-
-                if iv_entity is not initial and lv_customer is initial and lv_vendor is initial.
-                  raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '002'. " invalid entity
-                endif.
-
-                if lv_customer is not initial.
-                  " IHDK904637
-                  select single @abap_true
-                    from z6mma_params
-                    where progname = 'GSTNO_VAL_CUST'
-                    and   active_flag = @abap_true
-                    into @data(lv_cust_active).
-
-                  if lv_cust_active = abap_true.
-                    select single @abap_true
-                      from kna1
-                      into @data(lv_is_registered)
-                      where kunnr = @lv_customer
-                      and   land1 = 'IN'
-                      and   regio <> 'Z1'.  " Exlcude SEZ vendors, if any; IHDK904605
-
-                    if lv_is_registered eq abap_false.
-                      rv_valid = abap_true.
-                      return.
-                    endif.
-
-                    select single anred, name1, pstlz, regio, stcd3
-                      from kna1
-                      into @data(ls_data)
-                      where kunnr = @lv_customer.
-                  else.
-                    rv_valid = abap_true.
-                    return.
-                  endif.
-                endif.
-
-                if lv_vendor is not initial.
-                  " IHDK904637
-                  select single @abap_true
-                    from z6mma_params
-                    where progname = 'GSTNO_VAL_VEND'
-                    and   active_flag = @abap_true
-                    into @data(lv_vend_active).
-
-                  if lv_vend_active = abap_true.
-                    select single @abap_true
-                      from lfa1
-                      into @lv_is_registered
-                      where lifnr = @lv_vendor
-                      and   ktokk <> 'EMPL'     " IHDK904831
-                      and   ven_class = ''
-                      and   land1 = 'IN'. " registered
-
-                    if lv_is_registered eq abap_false.
-                      rv_valid = abap_true.
-                      return.
-                    endif.
-
-                    select single anred, name1, pstlz, regio, stcd3
-                      from lfa1
-                      into @ls_data
-                      where lifnr = @lv_vendor.
-                  else.
-                    rv_valid = abap_true.
-                    return.
-                  endif.
+                if lv_vend_active = abap_false.
+                  <ls_data>-message = 'Validation is not active'.
+                  continue.
                 endif.
               endif.
 
-              if iv_title is supplied.
-                ls_data-anred = iv_title.
+              if <ls_data>-title is initial.
+                message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
               endif.
 
-              if iv_name is supplied.
-                ls_data-name1 = iv_name.
+              if <ls_data>-name is initial.
+                message id 'Z_BUPA' type 'E' number '024' into <ls_data>-name_status. " Name not supplied/not maintained
               endif.
 
-              if iv_pincode is supplied.
-                ls_data-pstlz = iv_pincode.
-              endif.
-
-              if iv_state is supplied.
-                ls_data-regio = iv_state.
-              endif.
-
-              if iv_gst_number is supplied.
-                ls_data-stcd3 = iv_gst_number.
-              endif.
-
-              if ls_data-anred is initial.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '023'. " Title not supplied/not maintained
-              endif.
-
-              if ls_data-name1 is initial.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '024'. " Name not supplied/not maintained
-              endif.
-
-              if ls_data-pstlz is initial.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '025'. " Pincode not supplied/not maintained
+              if <ls_data>-pincode is initial.
+                message id 'Z_BUPA' type 'E' number '025' into <ls_data>-pincode_status. " Pincode not supplied/not maintained
               else.
-                if condense( ls_data-pstlz ) cn '0123456789' or strlen( ls_data-pstlz ) ne 6.
-                  raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '028'. " postal code contains non-numeric characters
+                if condense( <ls_data>-pincode ) cn '0123456789' or strlen( <ls_data>-pincode ) ne 6.
+                  message id 'Z_BUPA' type 'E' number '028' into <ls_data>-pincode_status. " postal code contains non-numeric characters
                 endif.
               endif.
 
-              if ls_data-regio is initial.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '003'. " state not supplied/maintained
+              if ls_data-state_code is initial.
+                message id 'Z_BUPA' type 'E' number '003' into <ls_data>-state_status. " state not supplied/maintained
               endif.
 
-              if ls_data-stcd3 is initial.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '009'. " GST number not supplied/maintained
+              if ls_data-gstin is initial.
+                message id 'Z_BUPA' type 'E' number '009' into <ls_data>-gstin_status. " GST number not supplied/maintained
               endif.
 
               if condense( ls_data-stcd3 ) ca space or ls_data-stcd3+0(1) eq space.
@@ -461,6 +398,7 @@ class lcl_app implementation.
               " End IHDK909105
             else.
               <ls_data>-message = 'Validation is not active'.
+              continue.
             endif.
           catch zcx_generic into data(lox_generic).
             <ls_data>-message = lox_generic->get_text( ).
