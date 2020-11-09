@@ -49,20 +49,20 @@
     </item>
     <item>
      <ID>S</ID>
-     <KEY>S_COMP</KEY>
-     <ENTRY>Company Code</ENTRY>
-     <LENGTH>20</LENGTH>
-    </item>
-    <item>
-     <ID>S</ID>
      <KEY>S_CUSACC</KEY>
-     <ENTRY>Customer Account Group</ENTRY>
+     <ENTRY>Account Group</ENTRY>
      <LENGTH>30</LENGTH>
     </item>
     <item>
      <ID>S</ID>
+     <KEY>S_CUSCMP</KEY>
+     <ENTRY>Company code</ENTRY>
+     <LENGTH>20</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
      <KEY>S_CUSGST</KEY>
-     <ENTRY>Customer GST Number</ENTRY>
+     <ENTRY>GST Number</ENTRY>
      <LENGTH>27</LENGTH>
     </item>
     <item>
@@ -98,8 +98,14 @@
     <item>
      <ID>S</ID>
      <KEY>S_VENACC</KEY>
-     <ENTRY>Vendor Account Group</ENTRY>
+     <ENTRY>Account Group</ENTRY>
      <LENGTH>28</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>S_VENCMP</KEY>
+     <ENTRY>Company code</ENTRY>
+     <LENGTH>20</LENGTH>
     </item>
     <item>
      <ID>S</ID>
@@ -110,7 +116,7 @@
     <item>
      <ID>S</ID>
      <KEY>S_VENGST</KEY>
-     <ENTRY>Vendor GST Number</ENTRY>
+     <ENTRY>GST Number</ENTRY>
      <LENGTH>25</LENGTH>
     </item>
    </TPOOL>
