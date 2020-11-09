@@ -225,181 +225,172 @@ class lcl_app implementation.
     endcase.
 
     if lt_data is not initial.
+      select single @abap_true
+        from z6mma_params
+        where progname = 'GSTNO_VAL_MASTER'
+        and   active_flag = @abap_true
+        into @data(lv_validation_active).
+
+      if lv_validation_active = abap_false.
+        message 'GST validation is not active - Master switch' type 'S' display like 'E'.
+        return.
+      endif.
+
+      case abap_true.
+        when r_cus.
+          select single @abap_true
+            from z6mma_params
+            where progname = 'GSTNO_VAL_CUST'
+            and   active_flag = @abap_true
+            into @data(lv_cust_active).
+
+          if lv_cust_active = abap_false.
+            message 'GST validation is not active - Customer switch' type 'S' display like 'E'.
+            return.
+          endif.
+        when r_ven.
+          select single @abap_true
+            from z6mma_params
+            where progname = 'GSTNO_VAL_VEND'
+            and   active_flag = @abap_true
+            into @data(lv_vend_active).
+
+          if lv_vend_active = abap_false.
+            message 'GST validation is not active - Vendor switch' type 'S' display like 'E'.
+            return.
+          endif.
+      endcase.
+
+      select param1 as sap_state, param2 as gst_state
+        from z6mma_params
+        where progname eq 'STATE_MAP'
+        into table @data(lt_gst_state).
+
       loop at lt_data assigning field-symbol(<ls_data>).
         try.
-            select single @abap_true
-              from z6mma_params
-              where progname = 'GSTNO_VAL_MASTER' " IHDK904637
-              and   active_flag = @abap_true
-              into @data(lv_validation_active).
-
-            if lv_validation_active = abap_true.
-              if <ls_data>-cus_ven is initial.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '000'
-                  with 'Customer/Vendor is a mandarory input'.
-                . " invalid input combination
-              endif.
-
-              if <ls_data>-cus_ven is not initial.
-                case abap_true.
-                  when r_cus.
-                    data(lv_customer) = conv kunnr( |{  <ls_data>-cus_ven alpha = in }| ).
-                  when r_ven.
-                    data(lv_vendor) = conv lifnr( |{ <ls_data>-cus_ven alpha = in }| ).
-                endcase.
-              endif.
-
-              if <ls_data>-cus_ven is not initial and lv_customer is initial and lv_vendor is initial.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '002'. " invalid entity
-              endif.
-
-              if lv_customer is not initial.
-                select single @abap_true
-                  from z6mma_params
-                  where progname = 'GSTNO_VAL_CUST'
-                  and   active_flag = @abap_true
-                  into @data(lv_cust_active).
-
-                if lv_cust_active = abap_false.
-                  <ls_data>-message = 'Validation is not active'.
-                  continue.
-                endif.
-              endif.
-
-              if lv_vendor is not initial.
-                select single @abap_true
-                  from z6mma_params
-                  where progname = 'GSTNO_VAL_VEND'
-                  and   active_flag = @abap_true
-                  into @data(lv_vend_active).
-
-                if lv_vend_active = abap_false.
-                  <ls_data>-message = 'Validation is not active'.
-                  continue.
-                endif.
-              endif.
-
-              if <ls_data>-title is initial.
-                message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
-              endif.
-
-              if <ls_data>-name is initial.
-                message id 'Z_BUPA' type 'E' number '024' into <ls_data>-name_status. " Name not supplied/not maintained
-              endif.
-
-              if <ls_data>-pincode is initial.
-                message id 'Z_BUPA' type 'E' number '025' into <ls_data>-pincode_status. " Pincode not supplied/not maintained
-              else.
-                if condense( <ls_data>-pincode ) cn '0123456789' or strlen( <ls_data>-pincode ) ne 6.
-                  message id 'Z_BUPA' type 'E' number '028' into <ls_data>-pincode_status. " postal code contains non-numeric characters
-                endif.
-              endif.
-
-              if ls_data-state_code is initial.
-                message id 'Z_BUPA' type 'E' number '003' into <ls_data>-state_status. " state not supplied/maintained
-              endif.
-
-              if ls_data-gstin is initial.
-                message id 'Z_BUPA' type 'E' number '009' into <ls_data>-gstin_status. " GST number not supplied/maintained
-              endif.
-
-              if condense( ls_data-stcd3 ) ca space or ls_data-stcd3+0(1) eq space.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '010'. " GST number should not contain spaces
-              endif.
-
-              zcl_helper=>condense_data( changing cs_data = ls_data ). " ABAP data to be condensed
-
-              " IHDK907779
-              select param1 as sap_state, param2 as gst_state
-                from z6mma_params
-                into table @data(lt_gst_state)
-                where progname eq 'STATE_MAP'
-                and   param1 eq @ls_data-regio.
-              " End IHDK907779
-
-              if lt_gst_state is initial or sy-subrc <> 0.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '011' with ls_data-regio. " GST state code not found for &
-              endif.
-
-              " IHDK907779
-              loop at lt_gst_state into data(ls_gst_state).
-                condense:
-                  ls_gst_state-sap_state,
-                  ls_gst_state-gst_state.
-
-                if ls_data-stcd3+0(2) eq ls_gst_state-gst_state.
-                  data(lv_state_ok) = abap_true.
-                endif.
-
-                clear ls_gst_state.
-              endloop.
-
-              if lv_state_ok = abap_true.
-                rv_valid = abap_true.
-              else.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '012'. " State code does not match first 2 characters of GSTIN
-              endif.
-              " End IHDK907779
-
-              " IHDK909105
-              get_gstin_info_with_gstin(
-                exporting
-                  iv_gstin      = ls_data-stcd3             " Tax Number 3
-                importing
-                  ev_active     = data(lv_gstin_active)     " Is GSTIN Active?
-                  ev_status     = data(lv_gstin_status)     " Status Text
-                receiving
-                  rs_gstin_info = data(ls_gstin_info) ).
-
-              if lv_gstin_active = abap_false.
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '000'
-                  with
-                      |GSTIN Check: Status: { lv_gstin_status }|.
-              else. " for active cases
-                " title check - to be implemented
-                if strlen( ls_data-anred ) <> 4 or ls_data-anred cn '0123456789'.
-                  " title description is provided
-                  ls_data-anred = to_upper( ls_data-anred ).
-                  select single title
-                    from tsad3t
-                    where upper( title_medi ) = @ls_data-anred
-                    into @ls_data-anred.
-
-                  if ls_data-anred is initial or sy-subrc <> 0.
-*            raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '023'. " Title not supplied/not maintained
-                  endif.
-                endif.
-
-                data(lv_gstin_ctb) = conv char100( to_upper( ls_gstin_info-data-ctb ) ).
-                if lv_gstin_ctb is initial.
-*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '032'. " Constitution Of Business not available with GSTIN
-                endif.
-
-                select single @abap_true
-                  from zxx_t_ctb_title
-                  where upper( gstin_ctb ) = @lv_gstin_ctb
-                  and   sap_title = @ls_data-anred
-                  into @data(lv_valid_title).
-
-                if lv_valid_title = abap_false.
-*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '029'. " Title does not match GSTIN "Constitution Of Business"
-                endif.
-
-                " name check
-                if to_upper( ls_data-name1 ) <> to_upper( ls_gstin_info-data-lgnm ).
-*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '030'.
-                endif.
-
-                " pincode check
-                if not line_exists( ls_gstin_info-data-adadr[ addr-pncd = ls_data-pstlz ] ).
-                  raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '031'.
-                endif.
-              endif.
-              " End IHDK909105
-            else.
-              <ls_data>-message = 'Validation is not active'.
-              continue.
+            if <ls_data>-cus_ven is initial.
+              raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '000'
+                with 'Customer/Vendor is a mandarory input'.
             endif.
+
+            if <ls_data>-cus_ven is not initial.
+              case abap_true.
+                when r_cus.
+                  data(lv_customer) = conv kunnr( |{  <ls_data>-cus_ven alpha = in }| ).
+                when r_ven.
+                  data(lv_vendor) = conv lifnr( |{ <ls_data>-cus_ven alpha = in }| ).
+              endcase.
+            endif.
+
+            if <ls_data>-cus_ven is not initial and lv_customer is initial and lv_vendor is initial.
+              raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '002'. " invalid entity
+            endif.
+
+            if <ls_data>-title is initial.
+              message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
+            endif.
+
+            if <ls_data>-name is initial.
+              message id 'Z_BUPA' type 'E' number '024' into <ls_data>-name_status. " Name not supplied/not maintained
+            endif.
+
+            if <ls_data>-pincode is initial.
+              message id 'Z_BUPA' type 'E' number '025' into <ls_data>-pincode_status. " Pincode not supplied/not maintained
+            else.
+              if condense( <ls_data>-pincode ) cn '0123456789' or strlen( <ls_data>-pincode ) ne 6.
+                message id 'Z_BUPA' type 'E' number '028' into <ls_data>-pincode_status. " postal code contains non-numeric characters
+              endif.
+            endif.
+
+            if <ls_data>-state_code is initial.
+              message id 'Z_BUPA' type 'E' number '003' into <ls_data>-state_status. " state not supplied/maintained
+            endif.
+
+            if <ls_data>-gstin is initial.
+              message id 'Z_BUPA' type 'E' number '009' into <ls_data>-gstin_status. " GST number not supplied/maintained
+            endif.
+
+            if condense( <ls_data>-stcd3 ) ca space or <ls_data>-stcd3+0(1) eq space.
+              message id 'Z_BUPA' type 'E' number '010' into <ls_data>-gstin_status. " GST number should not contain spaces
+            endif.
+
+            zcl_helper=>condense_data( changing cs_data = <ls_data> ). " ABAP data to be condensed
+
+            if not line_exists( lt_gst_state[ sap_state = <ls_data>-state_code ] ) is initial.
+              message id 'Z_BUPA' type 'E' number '011' with <ls_data>-state_code into <ls_data>-state_status. " GST state code not found for &
+            endif.
+
+            loop at lt_gst_state into data(ls_gst_state) where sap_state = <ls_data>-state_code.
+              condense:
+                ls_gst_state-sap_state,
+                ls_gst_state-gst_state.
+
+              if ls_data-stcd3+0(2) eq ls_gst_state-gst_state.
+                data(lv_state_ok) = abap_true.
+              endif.
+
+              clear ls_gst_state.
+            endloop.
+
+            if lv_state_ok = abap_false.
+              message id 'Z_BUPA' type 'E' number '012' into <ls_data>-state_status. " State code does not match first 2 characters of GSTIN
+            endif.
+            clear lv_state_ok.
+
+            " IHDK909105
+            zcl_bupa_utilities=>get_gstin_info_with_gstin(
+              exporting
+                iv_gstin      = <ls_data>-gstin           " Tax Number 3
+              importing
+                ev_active     = data(lv_gstin_active)     " Is GSTIN Active?
+                ev_status     = data(lv_gstin_status)     " Status Text
+              receiving
+                rs_gstin_info = data(ls_gstin_info) ).
+
+            if lv_gstin_active = abap_false.
+              message id 'Z_BUPA' type 'E' number '000'
+                with |GSTIN Check: Status: { lv_gstin_status }| into <ls_data>-gstin_status.
+            else. " for active cases
+              " title check - to be implemented
+              if strlen( ls_data-anred ) <> 4 or ls_data-anred cn '0123456789'.
+                " title description is provided
+                ls_data-anred = to_upper( ls_data-anred ).
+                select single title
+                  from tsad3t
+                  where upper( title_medi ) = @ls_data-anred
+                  into @ls_data-anred.
+
+                if ls_data-anred is initial or sy-subrc <> 0.
+*            raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '023'. " Title not supplied/not maintained
+                endif.
+              endif.
+
+              data(lv_gstin_ctb) = conv char100( to_upper( ls_gstin_info-data-ctb ) ).
+              if lv_gstin_ctb is initial.
+*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '032'. " Constitution Of Business not available with GSTIN
+              endif.
+
+              select single @abap_true
+                from zxx_t_ctb_title
+                where upper( gstin_ctb ) = @lv_gstin_ctb
+                and   sap_title = @ls_data-anred
+                into @data(lv_valid_title).
+
+              if lv_valid_title = abap_false.
+*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '029'. " Title does not match GSTIN "Constitution Of Business"
+              endif.
+
+              " name check
+              if to_upper( ls_data-name1 ) <> to_upper( ls_gstin_info-data-lgnm ).
+*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '030'.
+              endif.
+
+              " pincode check
+              if not line_exists( ls_gstin_info-data-adadr[ addr-pncd = ls_data-pstlz ] ).
+                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '031'.
+              endif.
+            endif.
+            " End IHDK909105
           catch zcx_generic into data(lox_generic).
             <ls_data>-message = lox_generic->get_text( ).
         endtry.
