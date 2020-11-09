@@ -266,6 +266,15 @@ class lcl_app implementation.
         where progname eq 'STATE_MAP'
         into table @data(lt_gst_state).
 
+      select title as title, upper( title_medi ) as title_medi
+        from tsad3t
+        where langu = @sy-langu
+        into table @data(lt_title).
+
+      select upper( gstin_ctb ) as gstin_ctb, sap_title as sap_title
+        from zxx_t_ctb_title
+        into table @data(lt_ctb_title).
+
       loop at lt_data assigning field-symbol(<ls_data>).
         try.
             if <ls_data>-cus_ven is initial.
@@ -310,13 +319,13 @@ class lcl_app implementation.
               message id 'Z_BUPA' type 'E' number '009' into <ls_data>-gstin_status. " GST number not supplied/maintained
             endif.
 
-            if condense( <ls_data>-stcd3 ) ca space or <ls_data>-stcd3+0(1) eq space.
+            if condense( <ls_data>-gstin ) ca space or <ls_data>-gstin+0(1) eq space.
               message id 'Z_BUPA' type 'E' number '010' into <ls_data>-gstin_status. " GST number should not contain spaces
             endif.
 
             zcl_helper=>condense_data( changing cs_data = <ls_data> ). " ABAP data to be condensed
 
-            if not line_exists( lt_gst_state[ sap_state = <ls_data>-state_code ] ) is initial.
+            if not line_exists( lt_gst_state[ sap_state = <ls_data>-state_code ] ).
               message id 'Z_BUPA' type 'E' number '011' with <ls_data>-state_code into <ls_data>-state_status. " GST state code not found for &
             endif.
 
@@ -325,7 +334,7 @@ class lcl_app implementation.
                 ls_gst_state-sap_state,
                 ls_gst_state-gst_state.
 
-              if ls_data-stcd3+0(2) eq ls_gst_state-gst_state.
+              if <ls_data>-gstin+0(2) eq ls_gst_state-gst_state.
                 data(lv_state_ok) = abap_true.
               endif.
 
@@ -335,7 +344,6 @@ class lcl_app implementation.
             if lv_state_ok = abap_false.
               message id 'Z_BUPA' type 'E' number '012' into <ls_data>-state_status. " State code does not match first 2 characters of GSTIN
             endif.
-            clear lv_state_ok.
 
             " IHDK909105
             zcl_bupa_utilities=>get_gstin_info_with_gstin(
@@ -352,48 +360,54 @@ class lcl_app implementation.
                 with |GSTIN Check: Status: { lv_gstin_status }| into <ls_data>-gstin_status.
             else. " for active cases
               " title check - to be implemented
-              if strlen( ls_data-anred ) <> 4 or ls_data-anred cn '0123456789'.
-                " title description is provided
-                ls_data-anred = to_upper( ls_data-anred ).
-                select single title
-                  from tsad3t
-                  where upper( title_medi ) = @ls_data-anred
-                  into @ls_data-anred.
+              if strlen( <ls_data>-title ) <> 4 or <ls_data>-title cn '0123456789'.
+                " title description is provided - get the code for the query below
+                <ls_data>-title = to_upper( <ls_data>-title ).
 
-                if ls_data-anred is initial or sy-subrc <> 0.
-*            raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '023'. " Title not supplied/not maintained
+                try.
+                    <ls_data>-title = lt_title[ title_medi = <ls_data>-title ]-title.
+                  catch cx_sy_itab_line_not_found ##no_handler.
+                    message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
+                endtry.
+                if <ls_data>-title is initial.
+                  message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
                 endif.
               endif.
 
-              data(lv_gstin_ctb) = conv char100( to_upper( ls_gstin_info-data-ctb ) ).
-              if lv_gstin_ctb is initial.
-*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '032'. " Constitution Of Business not available with GSTIN
+              <ls_data>-api_ctb = conv char100( to_upper( ls_gstin_info-data-ctb ) ).
+              if <ls_data>-api_ctb is initial.
+                message id 'Z_BUPA' type 'E' number '032' into <ls_data>-title_status. " Constitution Of Business not available with GSTIN
               endif.
 
-              select single @abap_true
-                from zxx_t_ctb_title
-                where upper( gstin_ctb ) = @lv_gstin_ctb
-                and   sap_title = @ls_data-anred
-                into @data(lv_valid_title).
-
-              if lv_valid_title = abap_false.
-*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '029'. " Title does not match GSTIN "Constitution Of Business"
+              if not line_exists( lt_ctb_title[ gstin_ctb = <ls_data>-api_ctb sap_title = <ls_data>-title ] ).
+                message id 'Z_BUPA' type 'E' number '029' into <ls_data>-title_status. " Title does not match GSTIN "Constitution Of Business"
               endif.
 
               " name check
-              if to_upper( ls_data-name1 ) <> to_upper( ls_gstin_info-data-lgnm ).
-*          raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '030'.
+              <ls_data>-api_legal_name = to_upper( ls_gstin_info-data-lgnm ).
+              if to_upper( <ls_data>-name ) <> <ls_data>-api_legal_name.
+                message id 'Z_BUPA' type 'E' number '030' into <ls_data>-name_status.
               endif.
 
               " pincode check
-              if not line_exists( ls_gstin_info-data-adadr[ addr-pncd = ls_data-pstlz ] ).
-                raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '031'.
+              if not line_exists( ls_gstin_info-data-adadr[ addr-pncd = <ls_data>-pincode ] ).
+                message id 'Z_BUPA' type 'E' number '031' into <ls_data>-pincode_status.
               endif.
             endif.
             " End IHDK909105
           catch zcx_generic into data(lox_generic).
             <ls_data>-message = lox_generic->get_text( ).
         endtry.
+
+        clear:
+          lox_generic,
+          ls_gstin_info,
+          lv_gstin_active,
+          lv_gstin_status,
+          ls_gst_state,
+          lv_state_ok,
+          lv_customer,
+          lv_vendor.
       endloop.
     else.
       message 'No data found for selection criteria' type 'S' display like 'E'.
