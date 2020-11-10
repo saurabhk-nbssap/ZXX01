@@ -103,6 +103,13 @@
     </item>
     <item>
      <ID>S</ID>
+     <KEY>S_EMAIL</KEY>
+     <ENTRY>.</ENTRY>
+     <LENGTH>9</LENGTH>
+     <SPLIT>D</SPLIT>
+    </item>
+    <item>
+     <ID>S</ID>
      <KEY>S_PORG</KEY>
      <ENTRY>Purchasing Organisation</ENTRY>
      <LENGTH>31</LENGTH>

@@ -344,42 +344,42 @@ class lcl_app implementation.
 
             if <ls_data>-cus_ven is not initial and lv_customer is initial and lv_vendor is initial.
               raise exception type zcx_generic message id '00' type 'E' number '001'
-                with 'GSTIN Check: Invalid entity (Customer/Vendor)' ' supplied'. " invalid entity
+                with 'GSTIN Check: Invalid entity (Customer/Vendor)' ' supplied'.
+                . " invalid entity
             endif.
 
             if <ls_data>-title is initial.
-              message |GSTIN Check: Title not supplied/not maintained| type 'E' into <ls_data>-title_status. " Title not supplied/not maintained
+              <ls_data>-title_status = |GSTIN Check: Title not supplied/not maintained|. " Title not supplied/not maintained
             endif.
 
             if <ls_data>-name is initial.
-              message |GSTIN Check: Name not supplied/not maintained| type 'E' into <ls_data>-name_status. " Name not supplied/not maintained
+              <ls_data>-name_status = |GSTIN Check: Name not supplied/not maintained|. " Name not supplied/not maintained
             endif.
 
             if <ls_data>-pincode is initial.
-              message |GSTIN Check: Pincode not supplied/not maintained| type 'E' into <ls_data>-pincode_status. " Pincode not supplied/not maintained
+              <ls_data>-pincode_status = |GSTIN Check: Pincode not supplied/not maintained|. " Pincode not supplied/not maintained
             else.
               if condense( <ls_data>-pincode ) cn '0123456789' or strlen( <ls_data>-pincode ) ne 6.
-                message |GSTIN Check: Pincode must be 6 character numeric data| type 'E' into <ls_data>-pincode_status. " postal code contains non-numeric characters
+                <ls_data>-pincode_status = |GSTIN Check: Pincode must be 6 character numeric data|. " postal code contains non-numeric characters
               endif.
             endif.
 
             if <ls_data>-state_code is initial.
-              message |GSTIN Check: State code not supplied/not maintained| type 'E' into <ls_data>-state_status. " state not supplied/maintained
+              <ls_data>-state_status = |GSTIN Check: State code not supplied/not maintained|. " state not supplied/maintained
             endif.
 
             if <ls_data>-gstin is initial.
-              message |GSTIN Check: GST number not supplied/not maintained| type 'E' into <ls_data>-gstin_status. " GST number not supplied/maintained
+              <ls_data>-gstin_status = |GSTIN Check: GST number not supplied/not maintained|. " GST number not supplied/maintained
             endif.
 
             if condense( <ls_data>-gstin ) ca space or <ls_data>-gstin+0(1) eq space.
-              message |GSTIN Check: GST number should not contain spaces| type 'E' into <ls_data>-gstin_status. " GST number should not contain spaces
+              <ls_data>-gstin_status = |GSTIN Check: GST number should not contain spaces|. " GST number should not contain spaces
             endif.
 
             zcl_helper=>condense_data( changing cs_data = <ls_data> ). " ABAP data to be condensed
 
             if not line_exists( lt_gst_state[ sap_state = <ls_data>-state_code ] ).
-              message |GSTIN Check: GST state code not found for { <ls_data>-state_code }| type 'E'
-                into <ls_data>-state_status. " GST state code not found for &
+              <ls_data>-state_status = |GSTIN Check: GST state code not found for { <ls_data>-state_code }|. " GST state code not found for &
             endif.
 
             loop at lt_gst_state into data(ls_gst_state) where sap_state = <ls_data>-state_code.
@@ -395,7 +395,8 @@ class lcl_app implementation.
             endloop.
 
             if lv_state_ok = abap_false.
-              message id 'Z_BUPA' type 'E' number '012' into <ls_data>-state_status. " State code does not match first 2 characters of GSTIN
+              <ls_data>-state_status = |GSTIN Check: State code does not match first 2 characters of GSTIN|.
+              " State code does not match first 2 characters of GSTIN
             endif.
 
             " IHDK909105
@@ -409,7 +410,7 @@ class lcl_app implementation.
                 rs_gstin_info = data(ls_gstin_info) ).
 
             if lv_gstin_active = abap_false.
-              message id 'Z_BUPA' type 'E' number '000'
+              message id '00' type 'E' number '001'
                 with |GSTIN Check: Status: { to_upper( lv_gstin_status ) }| into <ls_data>-gstin_status.
             else. " for active cases
               <ls_data>-gstin_status = to_upper( lv_gstin_status ).
@@ -423,36 +424,36 @@ class lcl_app implementation.
                 try.
                     <ls_data>-title = lt_title[ title_medi = <ls_data>-title ]-title.
                   catch cx_sy_itab_line_not_found ##no_handler.
-                    message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
+                    <ls_data>-title_status = |GSTIN Check: Title not supplied/not maintained|. " Title not supplied/not maintained
                 endtry.
                 if <ls_data>-title is initial.
-                  message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
+                  <ls_data>-title_status = |GSTIN Check: Title not supplied/not maintained|. " Title not supplied/not maintained
                 endif.
               endif.
 
               <ls_data>-api_ctb = conv char100( to_upper( ls_gstin_info-data-ctb ) ).
               if <ls_data>-api_ctb is initial.
-                message id 'Z_BUPA' type 'E' number '032' into <ls_data>-title_status. " Constitution Of Business not available with GSTIN
+                <ls_data>-title_status = |GSTIN Check: "Constitution Of Business" not available with GSTIN|. " Constitution Of Business not available with GSTIN
               endif.
 
               if not line_exists( lt_ctb_title[ gstin_ctb = <ls_data>-api_ctb sap_title = <ls_data>-title ] ).
-                message id 'Z_BUPA' type 'E' number '029' into <ls_data>-title_status. " Title does not match GSTIN "Constitution Of Business"
+                <ls_data>-title_status = |GSTIN Check: Title does not match GSTIN "Constitution Of Business"|. " Title does not match GSTIN "Constitution Of Business"
               endif.
               try.
                   <ls_data>-title = lt_title[ title = <ls_data>-title ]-title_medi.
                 catch cx_sy_itab_line_not_found ##no_handler.
-                  message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
+                  <ls_data>-title_status = |GSTIN Check: Title not supplied/not maintained|. " Title not supplied/not maintained
               endtry.
 
               " name check
               <ls_data>-api_legal_name = to_upper( ls_gstin_info-data-lgnm ).
               if to_upper( <ls_data>-name ) <> <ls_data>-api_legal_name.
-                message id 'Z_BUPA' type 'E' number '030' into <ls_data>-name_status.
+                <ls_data>-name_status = |GSTIN Check: Name does not match GSTIN legal name|.
               endif.
 
               " pincode check
               if not line_exists( ls_gstin_info-data-adadr[ addr-pncd = <ls_data>-pincode ] ).
-                message id 'Z_BUPA' type 'E' number '031' into <ls_data>-pincode_status.
+                <ls_data>-pincode_status = |GSTIN Check: Pincode does not match GSTIN address data|.
               endif.
             endif.
 
