@@ -4,15 +4,15 @@
   <asx:values>
    <AREAT>Extended Table Maintenance (Generated)</AREAT>
    <INCLUDES>
-    <SOBJ_NAME>LZXX_T_CTB_TITLEF00</SOBJ_NAME>
-    <SOBJ_NAME>LZXX_T_CTB_TITLEI00</SOBJ_NAME>
-    <SOBJ_NAME>LZXX_T_CTB_TITLETOP</SOBJ_NAME>
-    <SOBJ_NAME>LZXX_T_CTB_TITLET00</SOBJ_NAME>
-    <SOBJ_NAME>SAPLZXX_T_CTB_TITLE</SOBJ_NAME>
+    <SOBJ_NAME>LZXX_V_CTB_TITLEF00</SOBJ_NAME>
+    <SOBJ_NAME>LZXX_V_CTB_TITLEI00</SOBJ_NAME>
+    <SOBJ_NAME>LZXX_V_CTB_TITLETOP</SOBJ_NAME>
+    <SOBJ_NAME>LZXX_V_CTB_TITLET00</SOBJ_NAME>
+    <SOBJ_NAME>SAPLZXX_V_CTB_TITLE</SOBJ_NAME>
    </INCLUDES>
    <FUNCTIONS>
     <item>
-     <FUNCNAME>TABLEFRAME_ZXX_T_CTB_TITLE</FUNCNAME>
+     <FUNCNAME>VIEWFRAME_ZXX_V_CTB_TITLE</FUNCNAME>
      <SHORT_TEXT>Extended Table Maintenance: Upper Level</SHORT_TEXT>
      <IMPORT>
       <RSIMP>
@@ -53,6 +53,9 @@
      </TABLES>
      <EXCEPTION>
       <RSEXC>
+       <EXCEPTION>NO_VALUE_FOR_SUBSET_IDENT</EXCEPTION>
+      </RSEXC>
+      <RSEXC>
        <EXCEPTION>MISSING_CORR_NUMBER</EXCEPTION>
       </RSEXC>
      </EXCEPTION>
@@ -60,12 +63,12 @@
       <RSFDO>
        <PARAMETER>VIEW_ACTION</PARAMETER>
        <KIND>P</KIND>
-       <STEXT>Aktion mit Tabelle: anz./änd./transp. (S/U/T)</STEXT>
+       <STEXT>Aktion mit dem View: anzeigen/ändern (S/U)</STEXT>
       </RSFDO>
       <RSFDO>
        <PARAMETER>VIEW_NAME</PARAMETER>
        <KIND>P</KIND>
-       <STEXT>Name der Tabelle</STEXT>
+       <STEXT>Name des Views</STEXT>
       </RSFDO>
       <RSFDO>
        <PARAMETER>CORR_NUMBER</PARAMETER>
@@ -90,12 +93,17 @@
       <RSFDO>
        <PARAMETER>X_HEADER</PARAMETER>
        <KIND>P</KIND>
-       <STEXT>Kontrollblocktabelle für die Tabelle</STEXT>
+       <STEXT>Kontrollblocktabelle für den View</STEXT>
       </RSFDO>
       <RSFDO>
        <PARAMETER>X_NAMTAB</PARAMETER>
        <KIND>P</KIND>
-       <STEXT>Kontrollblocktabelle für die Tabellen-Felder</STEXT>
+       <STEXT>Kontrollblocktabelle für die View-Felder</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>NO_VALUE_FOR_SUBSET_IDENT</PARAMETER>
+       <KIND>X</KIND>
+       <STEXT>für &apos;SUBSET&apos;-Feld wurde kein Wert vorgegeben</STEXT>
       </RSFDO>
       <RSFDO>
        <PARAMETER>MISSING_CORR_NUMBER</PARAMETER>
@@ -105,7 +113,7 @@
      </DOCUMENTATION>
     </item>
     <item>
-     <FUNCNAME>TABLEPROC_ZXX_T_CTB_TITLE</FUNCNAME>
+     <FUNCNAME>VIEWPROC_ZXX_V_CTB_TITLE</FUNCNAME>
      <GLOBAL_FLAG>X</GLOBAL_FLAG>
      <SHORT_TEXT>Lower-level extended table maintenance</SHORT_TEXT>
      <IMPORT>
@@ -172,6 +180,9 @@
      </TABLES>
      <EXCEPTION>
       <RSEXC>
+       <EXCEPTION>NO_VALUE_FOR_SUBSET_IDENT</EXCEPTION>
+      </RSEXC>
+      <RSEXC>
        <EXCEPTION>MISSING_CORR_NUMBER</EXCEPTION>
       </RSEXC>
       <RSEXC>
@@ -187,12 +198,12 @@
       <RSFDO>
        <PARAMETER>VIEW_ACTION</PARAMETER>
        <KIND>P</KIND>
-       <STEXT>Aktion mit Tabelle: anz./änd./transp. (S/U/T)</STEXT>
+       <STEXT>Aktion mit dem View: anzeigen/ändern (S/U)</STEXT>
       </RSFDO>
       <RSFDO>
        <PARAMETER>VIEW_NAME</PARAMETER>
        <KIND>P</KIND>
-       <STEXT>Name der Tabelle</STEXT>
+       <STEXT>Name des Views</STEXT>
       </RSFDO>
       <RSFDO>
        <PARAMETER>CORR_NUMBER</PARAMETER>
@@ -247,12 +258,17 @@
       <RSFDO>
        <PARAMETER>X_HEADER</PARAMETER>
        <KIND>P</KIND>
-       <STEXT>Kontrollblocktabelle für die Tabelle</STEXT>
+       <STEXT>Kontrollblocktabelle für den View</STEXT>
       </RSFDO>
       <RSFDO>
        <PARAMETER>X_NAMTAB</PARAMETER>
        <KIND>P</KIND>
-       <STEXT>Kontrollblocktabelle für die Tabellen-Felder</STEXT>
+       <STEXT>Kontrollblocktabelle für die View-Felder</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>NO_VALUE_FOR_SUBSET_IDENT</PARAMETER>
+       <KIND>X</KIND>
+       <STEXT>für ein &apos;SUBSET&apos;-Feld wurde kein Wert vorgegeben</STEXT>
       </RSFDO>
       <RSFDO>
        <PARAMETER>MISSING_CORR_NUMBER</PARAMETER>
@@ -270,10 +286,10 @@
    <DYNPROS>
     <item>
      <HEADER>
-      <PROGRAM>SAPLZXX_T_CTB_TITLE</PROGRAM>
+      <PROGRAM>SAPLZXX_V_CTB_TITLE</PROGRAM>
       <SCREEN>0001</SCREEN>
       <LANGUAGE>E</LANGUAGE>
-      <DESCRIPT>View Maintenance: Overview Screen ZXX_T_CTB_TITLE</DESCRIPT>
+      <DESCRIPT>View Maintenance: Overview Screen ZXX_V_CTB_TITLE</DESCRIPT>
       <TYPE>N</TYPE>
       <NEXTSCREEN>0001</NEXTSCREEN>
       <LINES>061</LINES>
@@ -286,7 +302,7 @@
       </RPY_DYCATT>
       <RPY_DYCATT>
        <TYPE>TABLE_CTRL</TYPE>
-       <NAME>TCTRL_ZXX_T_CTB_TITLE</NAME>
+       <NAME>TCTRL_ZXX_V_CTB_TITLE</NAME>
        <ELEMENT_OF>SCREEN</ELEMENT_OF>
        <LINE>001</LINE>
        <COLUMN>001</COLUMN>
@@ -357,7 +373,7 @@
       </RPY_DYFATC>
       <RPY_DYFATC>
        <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
-       <CONT_NAME>TCTRL_ZXX_T_CTB_TITLE</CONT_NAME>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
        <TYPE>TEMPLATE</TYPE>
        <NAME>VIM_FRAME_FIELD</NAME>
        <TEXT>____________________________________________________________</TEXT>
@@ -373,9 +389,9 @@
       </RPY_DYFATC>
       <RPY_DYFATC>
        <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
-       <CONT_NAME>TCTRL_ZXX_T_CTB_TITLE</CONT_NAME>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
        <TYPE>TEXT</TYPE>
-       <NAME>*ZXX_T_CTB_TITLE-GSTIN_CTB</NAME>
+       <NAME>*ZXX_V_CTB_TITLE-GSTIN_CTB</NAME>
        <TEXT>CTB_as_per_GSTIN</TEXT>
        <LINE>001</LINE>
        <COLUMN>001</COLUMN>
@@ -388,9 +404,9 @@
       </RPY_DYFATC>
       <RPY_DYFATC>
        <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
-       <CONT_NAME>TCTRL_ZXX_T_CTB_TITLE</CONT_NAME>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
        <TYPE>TEXT</TYPE>
-       <NAME>*ZXX_T_CTB_TITLE-SAP_TITLE</NAME>
+       <NAME>*ZXX_V_CTB_TITLE-SAP_TITLE</NAME>
        <TEXT>SAP_Title</TEXT>
        <LINE>001</LINE>
        <COLUMN>002</COLUMN>
@@ -405,7 +421,41 @@
       </RPY_DYFATC>
       <RPY_DYFATC>
        <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
-       <CONT_NAME>TCTRL_ZXX_T_CTB_TITLE</CONT_NAME>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
+       <TYPE>TEXT</TYPE>
+       <NAME>*ZXX_V_CTB_TITLE-TITLE_MEDI</NAME>
+       <TEXT>Title_Description___________________________________</TEXT>
+       <LINE>001</LINE>
+       <COLUMN>003</COLUMN>
+       <LENGTH>052</LENGTH>
+       <VISLENGTH>030</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <FROM_DICT>X</FROM_DICT>
+       <MODIFIC>F</MODIFIC>
+       <REQU_ENTRY>N</REQU_ENTRY>
+       <TC_HEADING>X</TC_HEADING>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
+       <TYPE>TEXT</TYPE>
+       <NAME>*ZXX_V_CTB_TITLE-SEX</NAME>
+       <TEXT>Gender__________________________________</TEXT>
+       <LINE>001</LINE>
+       <COLUMN>004</COLUMN>
+       <LENGTH>040</LENGTH>
+       <VISLENGTH>030</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <FROM_DICT>X</FROM_DICT>
+       <MODIFIC>2</MODIFIC>
+       <REQU_ENTRY>N</REQU_ENTRY>
+       <TC_HEADING>X</TC_HEADING>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
        <TYPE>CHECK</TYPE>
        <NAME>VIM_MARKED</NAME>
        <LINE>001</LINE>
@@ -419,9 +469,9 @@
       </RPY_DYFATC>
       <RPY_DYFATC>
        <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
-       <CONT_NAME>TCTRL_ZXX_T_CTB_TITLE</CONT_NAME>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
        <TYPE>TEMPLATE</TYPE>
-       <NAME>ZXX_T_CTB_TITLE-GSTIN_CTB</NAME>
+       <NAME>ZXX_V_CTB_TITLE-GSTIN_CTB</NAME>
        <TEXT>____________________________________________________________________________________________________</TEXT>
        <ROLLING>X</ROLLING>
        <LINE>001</LINE>
@@ -438,9 +488,9 @@
       </RPY_DYFATC>
       <RPY_DYFATC>
        <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
-       <CONT_NAME>TCTRL_ZXX_T_CTB_TITLE</CONT_NAME>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
        <TYPE>TEMPLATE</TYPE>
-       <NAME>ZXX_T_CTB_TITLE-SAP_TITLE</NAME>
+       <NAME>ZXX_V_CTB_TITLE-SAP_TITLE</NAME>
        <TEXT>____</TEXT>
        <LINE>001</LINE>
        <COLUMN>002</COLUMN>
@@ -456,6 +506,43 @@
        <REQU_ENTRY>N</REQU_ENTRY>
        <DICT_I_FKY>X</DICT_I_FKY>
       </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
+       <TYPE>TEMPLATE</TYPE>
+       <NAME>ZXX_V_CTB_TITLE-TITLE_MEDI</NAME>
+       <TEXT>______________________________</TEXT>
+       <LINE>001</LINE>
+       <COLUMN>003</COLUMN>
+       <LENGTH>030</LENGTH>
+       <VISLENGTH>030</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <FROM_DICT>X</FROM_DICT>
+       <MODIFIC>X</MODIFIC>
+       <UP_LOWER>X</UP_LOWER>
+       <INPUT_FLD>X</INPUT_FLD>
+       <OUTPUT_FLD>X</OUTPUT_FLD>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>TABLE_CTRL</CONT_TYPE>
+       <CONT_NAME>TCTRL_ZXX_V_CTB_TITLE</CONT_NAME>
+       <TYPE>TEMPLATE</TYPE>
+       <NAME>ZXX_V_CTB_TITLE-SEX</NAME>
+       <TEXT>_</TEXT>
+       <DROPDOWN>L</DROPDOWN>
+       <LINE>001</LINE>
+       <COLUMN>004</COLUMN>
+       <LENGTH>001</LENGTH>
+       <VISLENGTH>030</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <FROM_DICT>X</FROM_DICT>
+       <MODIFIC>X</MODIFIC>
+       <INPUT_FLD>X</INPUT_FLD>
+       <OUTPUT_FLD>X</OUTPUT_FLD>
+       <DICT_I_VAL>X</DICT_I_VAL>
+      </RPY_DYFATC>
      </FIELDS>
      <FLOW_LOGIC>
       <RPY_DYFLOW>
@@ -468,7 +555,7 @@
        <LINE> LOOP AT EXTRACT WITH CONTROL</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
-       <LINE>  TCTRL_ZXX_T_CTB_TITLE CURSOR NEXTLINE.</LINE>
+       <LINE>  TCTRL_ZXX_V_CTB_TITLE CURSOR NEXTLINE.</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
        <LINE>   MODULE LISTE_SHOW_LISTE.</LINE>
@@ -498,13 +585,22 @@
        <LINE>   CHAIN.</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
-       <LINE>    FIELD ZXX_T_CTB_TITLE-GSTIN_CTB .</LINE>
+       <LINE>    FIELD ZXX_V_CTB_TITLE-GSTIN_CTB .</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
-       <LINE>    FIELD ZXX_T_CTB_TITLE-SAP_TITLE .</LINE>
+       <LINE>    FIELD ZXX_V_CTB_TITLE-SAP_TITLE .</LINE>
+      </RPY_DYFLOW>
+      <RPY_DYFLOW>
+       <LINE>    FIELD ZXX_V_CTB_TITLE-TITLE_MEDI .</LINE>
+      </RPY_DYFLOW>
+      <RPY_DYFLOW>
+       <LINE>    FIELD ZXX_V_CTB_TITLE-SEX .</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
        <LINE>    MODULE SET_UPDATE_FLAG ON CHAIN-REQUEST.</LINE>
+      </RPY_DYFLOW>
+      <RPY_DYFLOW>
+       <LINE>    MODULE COMPLETE_ZXX_V_CTB_TITLE ON CHAIN-REQUEST.</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
        <LINE>   ENDCHAIN.</LINE>
@@ -516,10 +612,10 @@
        <LINE>   CHAIN.</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
-       <LINE>    FIELD ZXX_T_CTB_TITLE-GSTIN_CTB .</LINE>
+       <LINE>    FIELD ZXX_V_CTB_TITLE-GSTIN_CTB .</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
-       <LINE>    FIELD ZXX_T_CTB_TITLE-SAP_TITLE .</LINE>
+       <LINE>    FIELD ZXX_V_CTB_TITLE-SAP_TITLE .</LINE>
       </RPY_DYFLOW>
       <RPY_DYFLOW>
        <LINE>    MODULE LISTE_UPDATE_LISTE.</LINE>
