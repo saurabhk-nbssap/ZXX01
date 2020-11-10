@@ -1,7 +1,8 @@
 *&---------------------------------------------------------------------*
 *& Report ZSD_REP_BP_VS_GSTIN_API_DATA
 *&---------------------------------------------------------------------*
-*&
+*& ZXX002 - 6010859; SaurabhK - Tuesday, November 10, 2020 11:38:12
+*& IHDK909113 - XX: S_K: ZXX001: Rep: BP vs GSTIN API data: 4.11.20
 *&---------------------------------------------------------------------*
 report sy-cprog.
 
@@ -29,7 +30,9 @@ class lcl_app definition.
       mv_ven_comp_code type lfb1-bukrs,
       mv_purch_grp     type lfm1-ekorg,
       mv_ven_acc_grp   type lfa1-ktokk,
-      mv_ven_gstin     type lfa1-stcd3.
+      mv_ven_gstin     type lfa1-stcd3,
+
+      mv_email_addr    type adr6-smtp_addr.
 
     class-methods:
       sel_screen_pbo,
@@ -83,6 +86,11 @@ select-options:
   s_venacc  for lcl_app=>mv_ven_acc_grp   modif id ven,
   s_vengst  for lcl_app=>mv_ven_gstin     modif id ven.
 selection-screen end of block ven.
+
+selection-screen begin of block xls with frame title text-xls.
+parameters c_excel as checkbox default 'X'.
+select-options s_email for lcl_app=>mv_email_addr.
+selection-screen end of block xls.
 
 selection-screen begin of block cmt with frame title text-cmt.
 selection-screen begin of line.
@@ -321,7 +329,7 @@ class lcl_app implementation.
 
         try.
             if <ls_data>-cus_ven is initial.
-              raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '000'
+              raise exception type zcx_generic message id '00' type 'E' number '001'
                 with 'Customer/Vendor is a mandarory input'.
             endif.
 
@@ -335,41 +343,43 @@ class lcl_app implementation.
             endif.
 
             if <ls_data>-cus_ven is not initial and lv_customer is initial and lv_vendor is initial.
-              raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '002'. " invalid entity
+              raise exception type zcx_generic message id '00' type 'E' number '001'
+                with 'GSTIN Check: Invalid entity (Customer/Vendor)' ' supplied'. " invalid entity
             endif.
 
             if <ls_data>-title is initial.
-              message id 'Z_BUPA' type 'E' number '023' into <ls_data>-title_status. " Title not supplied/not maintained
+              message |GSTIN Check: Title not supplied/not maintained| type 'E' into <ls_data>-title_status. " Title not supplied/not maintained
             endif.
 
             if <ls_data>-name is initial.
-              message id 'Z_BUPA' type 'E' number '024' into <ls_data>-name_status. " Name not supplied/not maintained
+              message |GSTIN Check: Name not supplied/not maintained| type 'E' into <ls_data>-name_status. " Name not supplied/not maintained
             endif.
 
             if <ls_data>-pincode is initial.
-              message id 'Z_BUPA' type 'E' number '025' into <ls_data>-pincode_status. " Pincode not supplied/not maintained
+              message |GSTIN Check: Pincode not supplied/not maintained| type 'E' into <ls_data>-pincode_status. " Pincode not supplied/not maintained
             else.
               if condense( <ls_data>-pincode ) cn '0123456789' or strlen( <ls_data>-pincode ) ne 6.
-                message id 'Z_BUPA' type 'E' number '028' into <ls_data>-pincode_status. " postal code contains non-numeric characters
+                message |GSTIN Check: Pincode must be 6 character numeric data| type 'E' into <ls_data>-pincode_status. " postal code contains non-numeric characters
               endif.
             endif.
 
             if <ls_data>-state_code is initial.
-              message id 'Z_BUPA' type 'E' number '003' into <ls_data>-state_status. " state not supplied/maintained
+              message |GSTIN Check: State code not supplied/not maintained| type 'E' into <ls_data>-state_status. " state not supplied/maintained
             endif.
 
             if <ls_data>-gstin is initial.
-              message id 'Z_BUPA' type 'E' number '009' into <ls_data>-gstin_status. " GST number not supplied/maintained
+              message |GSTIN Check: GST number not supplied/not maintained| type 'E' into <ls_data>-gstin_status. " GST number not supplied/maintained
             endif.
 
             if condense( <ls_data>-gstin ) ca space or <ls_data>-gstin+0(1) eq space.
-              message id 'Z_BUPA' type 'E' number '010' into <ls_data>-gstin_status. " GST number should not contain spaces
+              message |GSTIN Check: GST number should not contain spaces| type 'E' into <ls_data>-gstin_status. " GST number should not contain spaces
             endif.
 
             zcl_helper=>condense_data( changing cs_data = <ls_data> ). " ABAP data to be condensed
 
             if not line_exists( lt_gst_state[ sap_state = <ls_data>-state_code ] ).
-              message id 'Z_BUPA' type 'E' number '011' with <ls_data>-state_code into <ls_data>-state_status. " GST state code not found for &
+              message |GSTIN Check: GST state code not found for { <ls_data>-state_code }| type 'E'
+                into <ls_data>-state_status. " GST state code not found for &
             endif.
 
             loop at lt_gst_state into data(ls_gst_state) where sap_state = <ls_data>-state_code.
@@ -584,6 +594,37 @@ class lcl_app implementation.
 
             lo_alv->get_layout( )->set_default( exporting value = if_salv_c_bool_sap=>true ).
             lo_alv->get_layout( )->set_save_restriction( exporting value = if_salv_c_layout=>restrict_none ).
+
+            if c_excel = abap_true.
+              data(lv_xml) = lo_alv->to_xml(
+                               exporting
+                                 xml_type = if_salv_bs_xml=>c_type_xlsx
+                                 xml_flavour = if_salv_bs_c_tt=>c_tt_xml_flavour_export ).
+
+              delete s_email[] where low na '@'.
+              insert value #( sign = 'I' option = 'EQ' low = sy-uname ) into s_email[] index 1.
+
+              new zcl_email( )->send_email(
+                exporting
+                  subject        = conv #( |ZXX002: BP vs GSTIN API Data Report| )
+                  sender         = conv #( 'sapautomail@indofil.com' )
+                  body           = value #( ( |<html><body>Hello,<br><br>Your requested report is attached to this email.| )
+                                            ( |<br><br>Regards,<br>SAP AutoBot<br><br>| )
+                                            ( |<center>This is an auto-generated email. Kindly do not reply.</body></html>| ) )
+                  body_obj_type  = 'HTM'
+                  recipients     = value #( for ls in s_email[]
+                                              index into lv_indx
+                                              ( recipient = ls-low
+                                                copy = cond #( when lv_indx = 1
+                                                               then abap_false
+                                                               else abap_true ) ) )
+                  attachments    = value #( ( att_type  = conv #( 'BIN' )
+                                              att_subj  = conv #( |ZXX002_BP_vs_GSTIN_Data.xlsx| )
+                                              att_solix = conv #( cl_bcs_convert=>xstring_to_solix( exporting iv_xstring = lv_xml ) )
+                                              att_size  = conv #( xstrlen( lv_xml ) ) ) )
+                importing
+                  sent           = data(lv_sent) ).
+            endif.
 
             lo_alv->display( ).
           endif.
