@@ -88,8 +88,21 @@ selection-screen begin of block cmt with frame title text-cmt.
 selection-screen begin of line.
 selection-screen comment 1(75) cus1 modif id cus.
 selection-screen end of line.
+
 selection-screen begin of line.
 selection-screen comment 1(75) cus2 modif id cus.
+selection-screen end of line.
+
+selection-screen begin of line.
+selection-screen comment 1(75) ven1 modif id ven.
+selection-screen end of line.
+
+selection-screen begin of line.
+selection-screen comment 1(75) ven2 modif id ven.
+selection-screen end of line.
+
+selection-screen begin of line.
+selection-screen comment 1(75) ven3 modif id ven.
 selection-screen end of line.
 selection-screen end of block cmt.
 selection-screen end of block sel.
@@ -103,6 +116,9 @@ initialization.
   ptyp = 'Partner Type'.
   cus1 = '@MA@ Non-INDIAN( Country <> ''IN'' ) customers are excluded'.
   cus2 = '@MA@ SEZ( State Code = ''Z1'' ) customers are excluded'.
+  ven1 = '@MA@ Non-INDIAN( Country <> ''IN'' ) vendors are excluded'.
+  ven2 = '@MA@ Unregistered( Ven_Class <> '''' ) vendors are excluded'.
+  ven3 = '@MA@ Employee( Acc Grp = ''EMPL'' ) vendors are excluded'.
 *--------------------------------------------------------------------*
 * selection screen events
 *--------------------------------------------------------------------*
@@ -147,9 +163,12 @@ class lcl_app implementation.
   endmethod.
 
   method sel_screen_pai.
+    " To-Do
   endmethod.
 
   method process.
+*--------------------------------------------------------------------*
+    " Declaration
     data:
       begin of ls_data,
         cus_ven        type c length 10,
@@ -171,7 +190,8 @@ class lcl_app implementation.
         message        type string,
       end of ls_data,
       lt_data like standard table of ls_data.
-
+*--------------------------------------------------------------------*
+    " DB fetch
     clear lt_data.
     case abap_true.
       when r_cus.
@@ -203,11 +223,12 @@ class lcl_app implementation.
           and   c~spart in @s_div[]
           and   d~spras = @sy-langu
           and   d~land1 = 'IN'
+          order by a~kunnr ascending
           into corresponding fields of table @lt_data.
       when r_ven.
         select
           distinct
-          a~kunnr as cus_ven,
+          a~lifnr as cus_ven,
           a~ktokk as acc_grp,
           a~stcd3 as gstin,
           upper( a~anred ) as title,
@@ -231,10 +252,12 @@ class lcl_app implementation.
           and   c~ekorg in @s_porg[]
           and   d~spras = @sy-langu
           and   d~land1 = 'IN'
+          order by a~lifnr ascending
           into corresponding fields of table @lt_data.
       when others.
     endcase.
-
+*--------------------------------------------------------------------*
+    " Check GSTIN validation activation status
     if lt_data is not initial.
       select single @abap_true
         from z6mma_params
@@ -271,7 +294,8 @@ class lcl_app implementation.
             return.
           endif.
       endcase.
-
+*--------------------------------------------------------------------*
+      " Re-usable masters
       select param1 as sap_state, param2 as gst_state
         from z6mma_params
         where progname eq 'STATE_MAP'
@@ -285,8 +309,16 @@ class lcl_app implementation.
       select upper( gstin_ctb ) as gstin_ctb, sap_title as sap_title
         from zxx_t_ctb_title
         into table @data(lt_ctb_title).
-
+*--------------------------------------------------------------------*
+      " Validate
       loop at lt_data assigning field-symbol(<ls_data>).
+        cl_progress_indicator=>progress_indicate(
+          exporting
+            i_text               = |Validating entity { <ls_data>-cus_ven }...|               " Progress Text (If no message transferred in I_MSG*)
+            i_processed          = sy-tabix             " Number of Objects Already Processed
+            i_total              = lines( lt_data )     " Total Number of Objects to Be Processed
+            i_output_immediately = abap_true ).         " X = Display Progress Immediately
+
         try.
             if <ls_data>-cus_ven is initial.
               raise exception type zcx_generic message id 'Z_BUPA' type 'E' number '000'
@@ -368,9 +400,9 @@ class lcl_app implementation.
 
             if lv_gstin_active = abap_false.
               message id 'Z_BUPA' type 'E' number '000'
-                with |GSTIN Check: Status: { lv_gstin_status }| into <ls_data>-gstin_status.
+                with |GSTIN Check: Status: { to_upper( lv_gstin_status ) }| into <ls_data>-gstin_status.
             else. " for active cases
-              <ls_data>-gstin_status = lv_gstin_status.
+              <ls_data>-gstin_status = to_upper( lv_gstin_status ).
               <ls_data>-api_state = to_upper( ls_gstin_info-data-pradr-addr-stcd ).
 
               " title check - to be implemented
@@ -414,20 +446,22 @@ class lcl_app implementation.
               endif.
             endif.
 
-            if <ls_data>-title_status is initial.
-              <ls_data>-title_status = 'OK'.
-            endif.
+            if <ls_data>-gstin_status = 'ACTIVE'.
+              if <ls_data>-title_status is initial.
+                <ls_data>-title_status = 'OK'.
+              endif.
 
-            if <ls_data>-name_status is initial.
-              <ls_data>-name_status = 'OK'.
-            endif.
+              if <ls_data>-name_status is initial.
+                <ls_data>-name_status = 'OK'.
+              endif.
 
-            if <ls_data>-pincode_status is initial.
-              <ls_data>-pincode_status = 'OK'.
-            endif.
+              if <ls_data>-pincode_status is initial.
+                <ls_data>-pincode_status = 'OK'.
+              endif.
 
-            if <ls_data>-state_status is initial.
-              <ls_data>-state_status = 'OK'.
+              if <ls_data>-state_status is initial.
+                <ls_data>-state_status = 'OK'.
+              endif.
             endif.
           catch zcx_generic into data(lox_generic).
             <ls_data>-message = lox_generic->get_text( ).
@@ -443,7 +477,8 @@ class lcl_app implementation.
           lv_customer,
           lv_vendor.
       endloop.
-
+*--------------------------------------------------------------------*
+      " ALV  display
       data:
         lo_column           type ref to cl_salv_column_table,
         lox_salv_not_found  type ref to cx_salv_not_found ##needed,
