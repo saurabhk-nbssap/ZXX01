@@ -263,7 +263,8 @@ public section.
       value(ET_SLIS_FCAT) type SLIS_T_FIELDCAT_ALV .
   class-methods SIMPLE_SALV_DISPLAY
     importing
-      value(IT_TABLE) type STANDARD TABLE .
+      value(IT_TABLE) type STANDARD TABLE
+      value(IV_USE_COL_NAME_AS_HEADER) type ABAP_BOOL default ABAP_FALSE .
   class-methods GET_BGRFC_UNIT
     returning
       value(RO_UNIT) type ref to IF_TRFC_UNIT_OUTBOUND .
@@ -3356,13 +3357,13 @@ CLASS ZCL_HELPER IMPLEMENTATION.
                 loop at lt_col into data(ls_col).
                   translate ls_col-columnname using '_ '.
                   ls_col-columnname = to_mixed( ls_col-columnname ).
-                  if ls_col-r_column->get_long_text( ) is initial.
+                  if ls_col-r_column->get_long_text( ) is initial or iv_use_col_name_as_header = abap_true.
                     ls_col-r_column->set_long_text( exporting value = conv #( ls_col-columnname ) ).
                   endif.
-                  if ls_col-r_column->get_medium_text( ) is initial.
+                  if ls_col-r_column->get_medium_text( ) is initial or iv_use_col_name_as_header = abap_true.
                     ls_col-r_column->set_medium_text( exporting value = conv #( ls_col-columnname ) ).
                   endif.
-                  if ls_col-r_column->get_short_text( ) is initial.
+                  if ls_col-r_column->get_short_text( ) is initial or iv_use_col_name_as_header = abap_true.
                     ls_col-r_column->set_short_text( exporting value = conv #( ls_col-columnname ) ).
                   endif.
                   ls_col-r_column->set_output_length( exporting value = conv #( strlen( ls_col-columnname ) ) ).
