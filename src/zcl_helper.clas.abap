@@ -264,7 +264,8 @@ public section.
   class-methods SIMPLE_SALV_DISPLAY
     importing
       value(IT_TABLE) type STANDARD TABLE
-      value(IV_USE_COL_NAME_AS_HEADER) type ABAP_BOOL default ABAP_FALSE .
+      value(IV_USE_COL_NAME_AS_HEADER) type ABAP_BOOL default ABAP_FALSE
+      value(IV_LAYOUT) type SLIS_VARI optional .
   class-methods GET_BGRFC_UNIT
     returning
       value(RO_UNIT) type ref to IF_TRFC_UNIT_OUTBOUND .
@@ -3388,6 +3389,10 @@ CLASS ZCL_HELPER IMPLEMENTATION.
               lo_layout->set_save_restriction( exporting value = cl_salv_layout=>restrict_none ).
 
               lo_layout->set_default( exporting value = if_salv_c_bool_sap=>true ).
+
+              if iv_layout is not initial.
+                lo_layout->set_initial_layout( exporting value = iv_layout ).
+              endif.
             endif.
 
             lo_alv->display( ).
