@@ -81,5 +81,29 @@ CLASS ZCL_IM_CHANGE_ODN_CHECK IMPLEMENTATION.
       c_supply_type = '1'.    " Vendor
       c_odn_flag = abap_true. " tell the system to generate ODN
     endif.
+
+*--------------------------------------------------------------------*
+    " SBXK901015 - XX: S_K: No ODN in case of non-GST doc's: 4.1.20
+    " FI documents
+    loop at i_bseg transporting no fields where buzid = 'T' or mwskz is not initial.
+      data(lv_tax_found) = abap_true.
+      exit.
+    endloop.
+
+    loop at i_bset transporting no fields where mwskz is not initial.
+      lv_tax_found = abap_true.
+      exit.
+    endloop.
+
+    " Sales documents
+    loop at i_vbrp transporting no fields where mwskz is not initial or mwsk1 is not initial or mwsbp is not initial.
+      lv_tax_found = abap_true.
+      exit.
+    endloop.
+
+    if lv_tax_found = abap_false.
+      c_odn_flag = 'N'. " No ODN
+    endif.
+*--------------------------------------------------------------------*
   endmethod.
 ENDCLASS.
