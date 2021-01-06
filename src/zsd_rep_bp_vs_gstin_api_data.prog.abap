@@ -452,7 +452,8 @@ class lcl_app implementation.
               endif.
 
               " pincode check
-              if not line_exists( ls_gstin_info-data-adadr[ addr-pncd = <ls_data>-pincode ] ).
+              if not line_exists( ls_gstin_info-data-adadr[ addr-pncd = <ls_data>-pincode ] )
+                and <ls_data>-pincode <> ls_gstin_info-data-pradr-addr-pncd.
                 <ls_data>-pincode_status = |GSTIN Check: Pincode does not match GSTIN address data|.
               endif.
             endif.
