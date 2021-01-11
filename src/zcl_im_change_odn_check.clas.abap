@@ -99,7 +99,7 @@ CLASS ZCL_IM_CHANGE_ODN_CHECK IMPLEMENTATION.
     loop at i_vbrp into data(ls_vbrp).
       if ( ls_vbrp-mwskz is not initial or ls_vbrp-mwsk1 is not initial or ls_vbrp-mwsbp is not initial )
         " IHDK909822 - XX: S_K: No ODN for non-GST doc's: Excl Export : 4.1.20
-        or ( ( ls_vbrp-vtweg_auft = '20' or ls_vbrp-vtweg_auft = '25' ) and ( ls_vbrp-mvgr1 = '020' or ls_vbrp-mvgr1 = '030' ) ).
+        or ( ls_vbrp-vtweg_auft = '20' or ls_vbrp-vtweg_auft = '25' ).
         lv_tax_found = abap_true.
         exit.
       endif.
