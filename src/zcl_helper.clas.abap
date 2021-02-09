@@ -292,6 +292,11 @@ public section.
       value(IT_TABLE) type STANDARD TABLE
     returning
       value(RV_HTML) type STRING .
+  class-methods GET_FISCAL_YEAR
+    importing
+      value(IV_DATE) type SYST-DATUM default SY-DATUM
+    returning
+      value(RV_FISCAL_YEAR) type GJAHR .
 protected section.
 private section.
 
@@ -2650,6 +2655,31 @@ CLASS ZCL_HELPER IMPLEMENTATION.
     read table progtab into name index 1.
     name = to_upper( name ).
 *}   INSERT
+  endmethod.
+
+
+  method get_fiscal_year.
+    clear rv_fiscal_year.
+
+    data lv_fy type c length 4.
+
+    clear lv_fy.
+    call function 'GM_GET_FISCAL_YEAR'
+      exporting
+        i_date                     = iv_date " Date and time, current (application server) date
+        i_fyv                      = conv periv( 'V3' )    " Fiscal Year Variant
+      importing
+        e_fy                       = lv_fy     " Not More Closely Defined Area, Possibly Used for Patchlevels
+      exceptions
+        fiscal_year_does_not_exist = 1        " Fiscal year is not defined
+        not_defined_for_date       = 2        " Year dep. FYV not maintained for date requested
+        others                     = 3.
+    if sy-subrc <> 0.
+*     message id sy-msgid type sy-msgty number sy-msgno
+*       with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+    endif.
+
+    rv_fiscal_year = lv_fy.
   endmethod.
 
 
