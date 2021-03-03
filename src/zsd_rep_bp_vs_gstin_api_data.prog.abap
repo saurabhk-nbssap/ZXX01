@@ -108,6 +108,10 @@ selection-screen comment 1(75) cus2 modif id cus.
 selection-screen end of line.
 
 selection-screen begin of line.
+selection-screen comment 1(75) cus3 modif id cus.
+selection-screen end of line.
+
+selection-screen begin of line.
 selection-screen comment 1(75) ven1 modif id ven.
 selection-screen end of line.
 
@@ -130,6 +134,7 @@ initialization.
   ptyp = 'Partner Type'.
   cus1 = '@MA@ Non-INDIAN( Country <> ''IN'' ) customers are excluded'.
   cus2 = '@MA@ SEZ( State Code = ''Z1'' ) customers are excluded'.
+  cus3 = '@MA@ Unregisterd( Maintained in T-Code ZXX003 ) customers are excluded'.
   ven1 = '@MA@ Non-INDIAN( Country <> ''IN'' ) vendors are excluded'.
   ven2 = '@MA@ Unregistered( Ven_Class <> '''' ) vendors are excluded'.
   ven3 = '@MA@ Employee( Acc Grp = ''EMPL'' ) vendors are excluded'.
@@ -183,32 +188,17 @@ class lcl_app implementation.
   method process.
 *--------------------------------------------------------------------*
     " Declaration
-    data:
-      begin of ls_data,
-        cus_ven        type c length 10,
-        acc_grp        type c length 4,
-        gstin          type stcd3,
-        gstin_status   type string,
-        title          type anred,
-        api_ctb        type string,
-        title_status   type string,
-        name           type name1_gp,
-        api_legal_name type string,
-        api_trade_name type string,
-        name_status    type string,
-        pincode        type pstlz,
-        api_pincode    type string,
-        pincode_status type string,
-        state_code     type regio,
-        state          type bezei,
-        api_state      type string,
-        state_status   type string,
-        message        type string,
-      end of ls_data,
-      lt_data like standard table of ls_data.
+    data lt_data type standard table of zxx_t_gstin_api.
 *--------------------------------------------------------------------*
     " DB fetch
     clear lt_data.
+    if r_cus = abap_true.
+      select 'I' as sign, 'EQ' as option, param1 as low, param2 as high
+        from z6mma_params
+        where progname = 'UNREG_CUST'
+        into table @data(lrt_unreg_cust).
+    endif.
+
     if r_api = abap_true.
       case abap_true.
         when r_cus.
@@ -229,7 +219,7 @@ class lcl_app implementation.
             on a~kunnr = c~kunnr
             inner join t005u as d
             on a~regio = d~bland
-            where a~kunnr in @s_cust[]
+            where ( a~kunnr in @s_cust[] and a~kunnr not in @lrt_unreg_cust[] )
             and   a~ktokd in @s_cusacc[]
             and   a~stcd3 in @s_cusgst
             and   a~land1 = 'IN'
@@ -505,15 +495,18 @@ class lcl_app implementation.
             lv_customer,
             lv_vendor.
         endloop.
+
+        modify zxx_t_gstin_api from table lt_data.
+        if sy-dbcnt >= 1.
+          commit work.
+        endif.
       endif.
     endif.
-
+*--------------------------------------------------------------------*
     if r_tab = abap_true.
       case abap_true.
         when r_cus.
-          select
-            distinct
-            a~*
+          select a~*
             from zxx_t_gstin_api as a
             inner join kna1 as b
             on a~cus_ven = b~kunnr
@@ -521,7 +514,7 @@ class lcl_app implementation.
             on b~kunnr = c~kunnr
             inner join knvv as d
             on b~kunnr = d~kunnr
-            where ( a~cus_ven in @s_cust[] and b~kunnr in @s_cust[] )
+            where ( a~cus_ven in @s_cust[] and a~cus_ven not in @lrt_unreg_cust[] and b~kunnr in @s_cust[] )
             and   ( a~acc_grp in @s_cusacc[] and b~ktokd in @s_cusacc[] )
             and   ( a~gstin in @s_cusgst[] and b~stcd3 in @s_cusgst[] )
             and   b~land1 = 'IN'
@@ -533,26 +526,22 @@ class lcl_app implementation.
             order by a~cus_ven ascending
             into corresponding fields of table @lt_data.
         when r_ven.
-          select
-            distinct
-            a~*
-            from lfa1 as a
-            inner join lfb1 as b
-            on a~lifnr = b~lifnr
-            inner join lfm1 as c
-            on a~lifnr = c~lifnr
-            inner join t005u as d
-            on a~regio = d~bland
-            where a~lifnr in @s_vend[]
-            and   ( a~ktokk in @s_venacc[] and a~ktokk <> 'EMPL' )
-            and   a~stcd3 in @s_vengst
-            and   a~ven_class = ''
-            and   a~land1 = 'IN' " registered
-            and   b~bukrs in @s_vencmp[]
-            and   c~ekorg in @s_porg[]
-            and   d~spras = @sy-langu
-            and   d~land1 = 'IN'
-            order by a~lifnr ascending
+          select a~*
+            from zxx_t_gstin_api as a
+            inner join lfa1 as b
+            on a~cus_ven = b~lifnr
+            inner join lfb1 as c
+            on b~lifnr = c~lifnr
+            inner join lfm1 as d
+            on b~lifnr = d~lifnr
+            where ( a~cus_ven in @s_vend[] and b~lifnr in @s_vend[] )
+            and   ( a~acc_grp in @s_venacc[] and b~ktokk in @s_venacc[] and b~ktokk <> 'EMPL' )
+            and   ( a~gstin in @s_vengst[] and b~stcd3 in @s_vengst )
+            and   b~ven_class = ''
+            and   b~land1 = 'IN' " registered
+            and   c~bukrs in @s_vencmp[]
+            and   d~ekorg in @s_porg[]
+            order by b~lifnr ascending
             into corresponding fields of table @lt_data.
         when others.
       endcase.
@@ -659,6 +648,8 @@ class lcl_app implementation.
                 'CUS_VEN',
                 'GSTIN',
                 'GSTIN_STATUS'.
+
+              set_field_technical 'MANDT'.
 
               " optimise column width as per content length
               lo_columns->set_optimize( exporting value = if_salv_c_bool_sap=>true ).
