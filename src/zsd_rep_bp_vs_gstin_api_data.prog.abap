@@ -672,7 +672,8 @@ class lcl_app implementation.
 
               set_field_technical:
                 'MANDT',
-                'TYPE'.
+                'TYPE',
+                'API_JSON_RESPONSE'.
 
               " optimise column width as per content length
               lo_columns->set_optimize( exporting value = if_salv_c_bool_sap=>true ).
