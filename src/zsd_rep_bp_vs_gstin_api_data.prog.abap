@@ -188,8 +188,10 @@ class lcl_app implementation.
         title_status   type string,
         name           type name1_gp,
         api_legal_name type string,
+        api_trade_name type string,
         name_status    type string,
         pincode        type pstlz,
+        api_pincode    type string,
         pincode_status type string,
         state_code     type regio,
         state          type bezei,
@@ -447,7 +449,9 @@ class lcl_app implementation.
 
               " name check
               <ls_data>-api_legal_name = to_upper( ls_gstin_info-data-lgnm ).
-              if to_upper( <ls_data>-name ) <> <ls_data>-api_legal_name.
+              <ls_data>-api_trade_name = to_upper( ls_gstin_info-data-tradenam ).
+              if to_upper( <ls_data>-name ) <> <ls_data>-api_legal_name
+                and to_upper( <ls_data>-name ) <> <ls_data>-api_trade_name.
                 <ls_data>-name_status = |GSTIN Check: Name does not match GSTIN legal name|.
               endif.
 
@@ -574,9 +578,11 @@ class lcl_app implementation.
                 'API_CTB'                   'API Const. Of Business'        'API CTB'               'API CTB',
                 'TITLE_STATUS'              'Title Status'                  'Title Status'          'Title Sts',
                 'NAME'                      'Name'                          'Name'                  'Name',
-                'API_LEGAL_NAME'            'API Legal Name'                'API Legal Name'        'API Name',
+                'API_LEGAL_NAME'            'API Legal Name'                'API Legal Name'        'API L Name',
+                'API_TRADE_NAME'            'API Trade Name'                'API Trade Name'        'API T Name',
                 'NAME_STATUS'               'Name Status'                   'Name Status'           'Name Sts',
                 'PINCODE'                   'Pincode'                       'Pincode'               'Pincode',
+                'API_PINCODE'               'API Pincode'                   'API Pincode'           'API Pin',
                 'PINCODE_STATUS'            'Pincode Status'                'Pincode Status'        'Pin Sts',
                 'STATE_CODE'                'State Code'                    'State Code'            'State Code',
                 'STATE'                     'State'                         'State'                 'State',
