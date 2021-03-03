@@ -199,8 +199,18 @@ class lcl_app implementation.
         where progname = 'UNREG_CUST'
         into table @lrt_unreg_cust.
 
-      if lrt_unreg_cust[] is initial. " otherwise all cusstomers are excluded
+      if lrt_unreg_cust[] is initial. " otherwise all customers are excluded
         lrt_unreg_cust = value #( ( sign = 'I' option = 'EQ' low = 'XXXXXXXXXX' ) ).
+      endif.
+
+      data lrt_unreg_gstin type range of stcd3.
+      select 'I' as sign, 'EQ' as option, param1 as low
+        from z6mma_params
+        where progname = 'UNREG_GSTIN'
+        into table @lrt_unreg_gstin.
+
+      if lrt_unreg_gstin[] is initial. " otherwise all gstin's are excluded
+        lrt_unreg_gstin = value #( ( sign = 'I' option = 'EQ' low = 'XXXXXXXXXX' ) ).
       endif.
     endif.
 
@@ -227,7 +237,7 @@ class lcl_app implementation.
             on a~regio = d~bland
             where ( a~kunnr in @s_cust[] and a~kunnr not in @lrt_unreg_cust[] )
             and   a~ktokd in @s_cusacc[]
-            and   a~stcd3 in @s_cusgst
+            and   ( a~stcd3 in @s_cusgst and a~stcd3 not in @lrt_unreg_gstin[] )
             and   a~land1 = 'IN'
             and   a~regio <> 'Z1'  " Exlcude SEZ vendors
             and   b~bukrs in @s_cuscmp[]
@@ -526,7 +536,7 @@ class lcl_app implementation.
             where ( a~cus_ven in @s_cust[] and a~cus_ven not in @lrt_unreg_cust[] and b~kunnr in @s_cust[] )
             and   a~type = 'C'
             and   ( a~acc_grp in @s_cusacc[] and b~ktokd in @s_cusacc[] )
-            and   ( a~gstin in @s_cusgst[] and b~stcd3 in @s_cusgst[] )
+            and   ( a~gstin in @s_cusgst[] and a~gstin not in @lrt_unreg_gstin[] and b~stcd3 in @s_cusgst[] )
             and   b~land1 = 'IN'
             and   b~regio <> 'Z1'  " Exlcude SEZ vendors
             and   c~bukrs in @s_cuscmp[]
