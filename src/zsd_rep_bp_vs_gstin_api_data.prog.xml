@@ -32,6 +32,12 @@
     </item>
     <item>
      <ID>I</ID>
+     <KEY>SRC</KEY>
+     <ENTRY>Validation Data Source</ENTRY>
+     <LENGTH>44</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
      <KEY>VEN</KEY>
      <ENTRY>Vendor-specific selection criteria</ENTRY>
      <LENGTH>68</LENGTH>
@@ -55,9 +61,21 @@
     </item>
     <item>
      <ID>S</ID>
+     <KEY>R_API</KEY>
+     <ENTRY>API (Updates current API data)</ENTRY>
+     <LENGTH>38</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
      <KEY>R_CUS</KEY>
      <ENTRY>Customer</ENTRY>
      <LENGTH>16</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>R_TAB</KEY>
+     <ENTRY>Previously stored API data</ENTRY>
+     <LENGTH>34</LENGTH>
     </item>
     <item>
      <ID>S</ID>
@@ -105,7 +123,7 @@
      <ID>S</ID>
      <KEY>S_EMAIL</KEY>
      <ENTRY>.</ENTRY>
-     <LENGTH>9</LENGTH>
+     <LENGTH>22</LENGTH>
      <SPLIT>D</SPLIT>
     </item>
     <item>
