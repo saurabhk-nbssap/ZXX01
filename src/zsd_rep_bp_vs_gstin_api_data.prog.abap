@@ -134,7 +134,7 @@ initialization.
   ptyp = 'Partner Type'.
   cus1 = '@MA@ Non-INDIAN( Country <> ''IN'' ) customers are excluded'.
   cus2 = '@MA@ SEZ( State Code = ''Z1'' ) customers are excluded'.
-  cus3 = '@MA@ Unregisterd( Maintained in T-Code ZXX003 ) customers are excluded'.
+  cus3 = '@MA@ Unregisterd( Maintained in T-Code ZSD101 ) customers are excluded'.
   ven1 = '@MA@ Non-INDIAN( Country <> ''IN'' ) vendors are excluded'.
   ven2 = '@MA@ Unregistered( Ven_Class <> '''' ) vendors are excluded'.
   ven3 = '@MA@ Employee( Acc Grp = ''EMPL'' ) vendors are excluded'.
@@ -193,10 +193,15 @@ class lcl_app implementation.
     " DB fetch
     clear lt_data.
     if r_cus = abap_true.
-      select 'I' as sign, 'EQ' as option, param1 as low, param2 as high
+      data lrt_unreg_cust type range of kunnr.
+      select 'I' as sign, 'EQ' as option, concat( '0000', param1 ) as low
         from z6mma_params
         where progname = 'UNREG_CUST'
-        into table @data(lrt_unreg_cust).
+        into table @lrt_unreg_cust.
+
+      if lrt_unreg_cust[] is initial. " otherwise all cusstomers are excluded
+        lrt_unreg_cust = value #( ( sign = 'I' option = 'EQ' low = 'XXXXXXXXXX' ) ).
+      endif.
     endif.
 
     if r_api = abap_true.
@@ -205,6 +210,7 @@ class lcl_app implementation.
           select
             distinct
             a~kunnr as cus_ven,
+            'C' as type,
             a~ktokd as acc_grp,
             a~stcd3 as gstin,
             upper( a~anred ) as title,
@@ -236,6 +242,7 @@ class lcl_app implementation.
           select
             distinct
             a~lifnr as cus_ven,
+            'V' as type,
             a~ktokk as acc_grp,
             a~stcd3 as gstin,
             upper( a~anred ) as title,
@@ -344,7 +351,7 @@ class lcl_app implementation.
               if <ls_data>-cus_ven is not initial and lv_customer is initial and lv_vendor is initial.
                 raise exception type zcx_generic message id '00' type 'E' number '001'
                   with 'GSTIN Check: Invalid entity (Customer/Vendor)' ' supplied'.
-                . " invalid entity
+                " invalid entity
               endif.
 
               if <ls_data>-title is initial.
@@ -402,9 +409,11 @@ class lcl_app implementation.
               zcl_bupa_utilities=>get_gstin_info_with_gstin(
                 exporting
                   iv_gstin      = <ls_data>-gstin           " Tax Number 3
+                  iv_call_api   = abap_true
                 importing
                   ev_active     = data(lv_gstin_active)     " Is GSTIN Active?
                   ev_status     = data(lv_gstin_status)     " Status Text
+                  ev_json_response = <ls_data>-api_json_response
                 receiving
                   rs_gstin_info = data(ls_gstin_info) ).
 
@@ -515,6 +524,7 @@ class lcl_app implementation.
             inner join knvv as d
             on b~kunnr = d~kunnr
             where ( a~cus_ven in @s_cust[] and a~cus_ven not in @lrt_unreg_cust[] and b~kunnr in @s_cust[] )
+            and   a~type = 'C'
             and   ( a~acc_grp in @s_cusacc[] and b~ktokd in @s_cusacc[] )
             and   ( a~gstin in @s_cusgst[] and b~stcd3 in @s_cusgst[] )
             and   b~land1 = 'IN'
@@ -535,6 +545,7 @@ class lcl_app implementation.
             inner join lfm1 as d
             on b~lifnr = d~lifnr
             where ( a~cus_ven in @s_vend[] and b~lifnr in @s_vend[] )
+            and   a~type = 'V'
             and   ( a~acc_grp in @s_venacc[] and b~ktokk in @s_venacc[] and b~ktokk <> 'EMPL' )
             and   ( a~gstin in @s_vengst[] and b~stcd3 in @s_vengst )
             and   b~ven_class = ''
@@ -649,7 +660,9 @@ class lcl_app implementation.
                 'GSTIN',
                 'GSTIN_STATUS'.
 
-              set_field_technical 'MANDT'.
+              set_field_technical:
+                'MANDT',
+                'TYPE'.
 
               " optimise column width as per content length
               lo_columns->set_optimize( exporting value = if_salv_c_bool_sap=>true ).
